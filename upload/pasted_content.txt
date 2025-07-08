@@ -1,0 +1,245 @@
+from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from datetime import datetime, date
+import json
+from sqlalchemy.dialects.postgresql import ARRAY
+
+db = SQLAlchemy()
+bcrypt = Bcrypt()
+
+class User(db.Model):
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    user_type = db.Column(db.Enum('hoster', 'daycare', 'parent', name='user_types'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    email_verified = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_login = db.Column(db.DateTime)
+    preferred_language = db.Column(db.Enum('en', 'fr', name='languages'), default='en')
+    
+    # Relationships
+    hoster = db.relationship('WebsiteHoster', backref='user', uselist=False, cascade='all, delete-orphan')
+    daycare_staff = db.relationship('DaycareStaff', backref='user', cascade='all, delete-orphan')
+    parent = db.relationship('Parent', backref='user', uselist=False, cascade='all, delete-orphan')
+    
+    def set_password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password_hash, password)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'email': self.email,
+            'user_type': self.user_type,
+            'is_active': self.is_active,
+            'email_verified': self.email_verified,
+            'preferred_language': self.preferred_language,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_login': self.last_login.isoformat() if self.last_login else None
+        }
+
+class WebsiteHoster(db.Model):
+    __tablename__ = 'website_hosters'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20))
+    admin_level = db.Column(db.Enum('super_admin', 'admin', 'support', name='admin_levels'), default='admin')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'phone': self.phone,
+            'admin_level': self.admin_level,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class Daycare(db.Model):
+    __tablename__ = 'daycares'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    license_number = db.Column(db.String(100), unique=True)
+    street = db.Column(db.Text,    nullable=False)
+    city = db.Column(db.String(100), nullable=False)
+    province = db.Column(db.String(50),  nullable=False)
+    postal_code = db.Column(db.String(10),  nullable=False)
+
+    @property
+    def address(self):
+        return {
+            "street":      self.street,
+            "city":        self.city,
+            "province":    self.province,
+            "postal_code": self.postal_code
+        }
+    
+    @address.setter
+    def address(self, val: dict):
+        self.street      = val.get("street", "")
+        self.city        = val.get("city", "")
+        self.province    = val.get("province", "")
+        self.postal_code = val.get("postal_code", "")
+    phone = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
+    capacity = db.Column(db.Integer, nullable=False)
+    age_groups = db.Column(ARRAY(db.Text), nullable=False, server_default="{}")
+    subscription_plan = db.Column(db.Enum('basic', 'standard', 'premium', name='subscription_plans'), default='basic')
+    subscription_status = db.Column(db.Enum('trial', 'active', 'suspended', 'cancelled', name='subscription_statuses'),  nullable=False, default='trial')
+    incident_management = db.Column(db.Boolean, nullable=False, server_default='true')
+    payment_processing = db.Column(db.Boolean, nullable=False, server_default='true')
+    parent_portal = db.Column(db.Boolean, nullable=False, server_default='true')
+    reporting = db.Column(db.Boolean, nullable=False, server_default='false')
+    is_active        = db.Column(db.Boolean, nullable=False, server_default='true')
+
+    @property
+    def features_enabled(self):
+        return {
+            "incident_management": self.incident_management,
+            "payment_processing":  self.payment_processing,
+            "parent_portal":       self.parent_portal,
+            "reporting":           self.reporting
+        }
+
+    @features_enabled.setter
+    def features_enabled(self, val: dict):
+        self.incident_management = bool(val.get("incident_management", True))
+        self.payment_processing  = bool(val.get("payment_processing",  True))
+        self.parent_portal       = bool(val.get("parent_portal",       True))
+        self.reporting           = bool(val.get("reporting",           False))
+    subscription_start_date = db.Column(db.Date)
+    subscription_end_date = db.Column(db.Date)
+    settings = db.Column(db.Text)  # JSON string
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    staff = db.relationship('DaycareStaff', backref='daycare', cascade='all, delete-orphan')
+    children = db.relationship('Child', backref='daycare', cascade='all, delete-orphan')
+    activities = db.relationship('Activity', backref='daycare', cascade='all, delete-orphan')
+    payment_plans = db.relationship('PaymentPlan', backref='daycare', cascade='all, delete-orphan')
+    registration_requests = db.relationship('RegistrationRequest', backref='daycare', cascade='all, delete-orphan')
+    
+    def get_age_groups(self):
+        return json.loads(self.age_groups) if self.age_groups else []
+    
+    def set_age_groups(self, age_groups):
+        self.age_groups = json.dumps(age_groups)
+    
+    def get_features_enabled(self):
+        return json.loads(self.features_enabled) if self.features_enabled else {}
+    
+    def set_features_enabled(self, features):
+        self.features_enabled = json.dumps(features)
+    
+    def get_settings(self):
+        return json.loads(self.settings) if self.settings else {}
+    
+    def set_settings(self, settings):
+        self.settings = json.dumps(settings)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'license_number': self.license_number,
+            'address': self.address,
+            'city': self.city,
+            'province': self.province,
+            'postal_code': self.postal_code,
+            'phone': self.phone,
+            'email': self.email,
+            'capacity': self.capacity,
+            'age_groups': self.get_age_groups(),
+            'subscription_plan': self.subscription_plan,
+            'subscription_status': self.subscription_status,
+            'subscription_start_date': self.subscription_start_date.isoformat() if self.subscription_start_date else None,
+            'subscription_end_date': self.subscription_end_date.isoformat() if self.subscription_end_date else None,
+            'features_enabled': self.get_features_enabled(),
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class DaycareStaff(db.Model):
+    __tablename__ = 'daycare_staff'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    daycare_id = db.Column(db.Integer, db.ForeignKey('daycares.id'), nullable=False)
+    role = db.Column(db.Enum('owner', 'director', 'teacher', 'assistant', 'admin', name='staff_roles'), nullable=False)
+    hire_date = db.Column(db.Date, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    permissions = db.Column(db.Text)  # JSON string
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('user_id', 'daycare_id', name='unique_user_daycare'),)
+    
+    def get_permissions(self):
+        return json.loads(self.permissions) if self.permissions else {}
+    
+    def set_permissions(self, permissions):
+        self.permissions = json.dumps(permissions)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'daycare_id': self.daycare_id,
+            'role': self.role,
+            'hire_date': self.hire_date.isoformat() if self.hire_date else None,
+            'is_active': self.is_active,
+            'permissions': self.get_permissions(),
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+class Parent(db.Model):
+    __tablename__ = 'parents'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    address = db.Column(db.Text)
+    city = db.Column(db.String(100))
+    province = db.Column(db.String(50))
+    postal_code = db.Column(db.String(10))
+    emergency_contact_name = db.Column(db.String(200))
+    emergency_contact_phone = db.Column(db.String(20))
+    emergency_contact_relationship = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    primary_children = db.relationship('Child', backref='primary_parent', foreign_keys='Child.primary_parent_id')
+    child_relationships = db.relationship('ParentChildRelationship', backref='parent', cascade='all, delete-orphan')
+    invoices = db.relationship('Invoice', backref='parent', cascade='all, delete-orphan')
+    payments = db.relationship('Payment', backref='parent', cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'phone': self.phone,
+            'address': self.address,
+            'city': self.city,
+            'province': self.province,
+            'postal_code': self.postal_code,
+            'emergency_contact_name': self.emergency_contact_name,
+            'emergency_contact_phone': self.emergency_contact_phone,
+            'emergency_contact_relationship': self.emergency_contact_relationship,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+

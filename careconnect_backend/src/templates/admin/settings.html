@@ -1,0 +1,617 @@
+{% extends "admin/base.html" %}
+
+{% block title %}System Settings - CareConnect Admin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">System Settings</h1>
+            <p class="text-gray-600">Configure and manage all aspects of the CareConnect system</p>
+        </div>
+        <div class="flex space-x-3">
+            <button onclick="exportSettings()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span>Export Settings</span>
+            </button>
+            <button onclick="saveAllSettings()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                </svg>
+                <span>Save All</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Navigation -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                <button onclick="showTab('general')" id="tab-general" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-button active">
+                    General
+                </button>
+                <button onclick="showTab('security')" id="tab-security" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-button">
+                    Security
+                </button>
+                <button onclick="showTab('notifications')" id="tab-notifications" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-button">
+                    Notifications
+                </button>
+                <button onclick="showTab('integrations')" id="tab-integrations" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-button">
+                    Integrations
+                </button>
+                <button onclick="showTab('backup')" id="tab-backup" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-button">
+                    Backup & Restore
+                </button>
+                <button onclick="showTab('maintenance')" id="tab-maintenance" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-button">
+                    Maintenance
+                </button>
+                <button onclick="showTab('advanced')" id="tab-advanced" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm tab-button">
+                    Advanced
+                </button>
+            </nav>
+        </div>
+
+        <!-- General Settings Tab -->
+        <div id="general-tab" class="tab-content p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-6">General Settings</h3>
+            
+            <div class="space-y-6">
+                <!-- System Information -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">System Information</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Application Name</label>
+                            <input type="text" value="CareConnect Canada" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Version</label>
+                            <input type="text" value="1.0.0" readonly class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Default Language</label>
+                            <select class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="en">English</option>
+                                <option value="fr">French</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Timezone</label>
+                            <select class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="America/Toronto">Eastern Time (Toronto)</option>
+                                <option value="America/Vancouver">Pacific Time (Vancouver)</option>
+                                <option value="America/Edmonton">Mountain Time (Edmonton)</option>
+                                <option value="America/Winnipeg">Central Time (Winnipeg)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Business Settings -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Business Settings</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Company Name</label>
+                            <input type="text" value="CareConnect Canada Inc." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Support Email</label>
+                            <input type="email" value="support@careconnect.ca" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Support Phone</label>
+                            <input type="tel" value="+1 (800) 123-4567" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Business Hours</label>
+                            <input type="text" value="Monday - Friday, 8:00 AM - 6:00 PM EST" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature Toggles -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Feature Toggles</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">User Registration</label>
+                                <p class="text-sm text-gray-500">Allow new users to register accounts</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Email Notifications</label>
+                                <p class="text-sm text-gray-500">Send email notifications to users</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">SMS Notifications</label>
+                                <p class="text-sm text-gray-500">Send SMS notifications to users</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Maintenance Mode</label>
+                                <p class="text-sm text-gray-500">Put the system in maintenance mode</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Settings Tab -->
+        <div id="security-tab" class="tab-content p-6 hidden">
+            <h3 class="text-lg font-medium text-gray-900 mb-6">Security Settings</h3>
+            
+            <div class="space-y-6">
+                <!-- Password Policy -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Password Policy</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Minimum Length</label>
+                            <input type="number" value="8" min="6" max="20" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Password Expiry (days)</label>
+                            <input type="number" value="90" min="30" max="365" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="mt-4 space-y-3">
+                        <div class="flex items-center">
+                            <input type="checkbox" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label class="ml-2 text-sm text-gray-700">Require uppercase letters</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label class="ml-2 text-sm text-gray-700">Require lowercase letters</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" checked class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label class="ml-2 text-sm text-gray-700">Require numbers</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label class="ml-2 text-sm text-gray-700">Require special characters</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Management -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Session Management</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Session Timeout (minutes)</label>
+                            <input type="number" value="30" min="5" max="480" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Max Failed Login Attempts</label>
+                            <input type="number" value="5" min="3" max="10" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two-Factor Authentication -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Two-Factor Authentication</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Require 2FA for Admin Users</label>
+                                <p class="text-sm text-gray-500">Force all admin users to use two-factor authentication</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Allow SMS 2FA</label>
+                                <p class="text-sm text-gray-500">Allow users to use SMS for two-factor authentication</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Tab -->
+        <div id="notifications-tab" class="tab-content p-6 hidden">
+            <h3 class="text-lg font-medium text-gray-900 mb-6">Notification Settings</h3>
+            
+            <div class="space-y-6">
+                <!-- Email Configuration -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Email Configuration</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">SMTP Server</label>
+                            <input type="text" value="smtp.gmail.com" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">SMTP Port</label>
+                            <input type="number" value="587" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">From Email</label>
+                            <input type="email" value="noreply@careconnect.ca" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">From Name</label>
+                            <input type="text" value="CareConnect Canada" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Test Email Configuration</button>
+                    </div>
+                </div>
+
+                <!-- Notification Types -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Notification Types</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">New User Registration</label>
+                                <p class="text-sm text-gray-500">Notify admins when new users register</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Incident Reports</label>
+                                <p class="text-sm text-gray-500">Notify relevant parties about incident reports</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Payment Reminders</label>
+                                <p class="text-sm text-gray-500">Send payment reminders to parents</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Integrations Tab -->
+        <div id="integrations-tab" class="tab-content p-6 hidden">
+            <h3 class="text-lg font-medium text-gray-900 mb-6">Third-Party Integrations</h3>
+            
+            <div class="space-y-6">
+                <!-- Payment Gateways -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Payment Gateways</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                            <div class="flex items-center">
+                                <img src="https://via.placeholder.com/40x40?text=Stripe" alt="Stripe" class="w-10 h-10 rounded">
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900">Stripe</p>
+                                    <p class="text-sm text-gray-500">Credit card processing</p>
+                                </div>
+                            </div>
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Configure</button>
+                        </div>
+                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                            <div class="flex items-center">
+                                <img src="https://via.placeholder.com/40x40?text=PayPal" alt="PayPal" class="w-10 h-10 rounded">
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900">PayPal</p>
+                                    <p class="text-sm text-gray-500">Online payments</p>
+                                </div>
+                            </div>
+                            <button class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md">Configure</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Communication Services -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Communication Services</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                            <div class="flex items-center">
+                                <img src="https://via.placeholder.com/40x40?text=Twilio" alt="Twilio" class="w-10 h-10 rounded">
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900">Twilio</p>
+                                    <p class="text-sm text-gray-500">SMS and voice services</p>
+                                </div>
+                            </div>
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Configure</button>
+                        </div>
+                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                            <div class="flex items-center">
+                                <img src="https://via.placeholder.com/40x40?text=SendGrid" alt="SendGrid" class="w-10 h-10 rounded">
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900">SendGrid</p>
+                                    <p class="text-sm text-gray-500">Email delivery service</p>
+                                </div>
+                            </div>
+                            <button class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md">Configure</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backup & Restore Tab -->
+        <div id="backup-tab" class="tab-content p-6 hidden">
+            <h3 class="text-lg font-medium text-gray-900 mb-6">Backup & Restore</h3>
+            
+            <div class="space-y-6">
+                <!-- Automatic Backups -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Automatic Backups</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Backup Frequency</label>
+                            <select class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Retention Period (days)</label>
+                            <input type="number" value="30" min="7" max="365" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="mt-4 flex space-x-3">
+                        <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md">Create Backup Now</button>
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Download Latest Backup</button>
+                    </div>
+                </div>
+
+                <!-- Backup History -->
+                <div class="bg-white rounded-lg border border-gray-200">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h4 class="text-md font-medium text-gray-900">Recent Backups</h4>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2025-01-07 02:00:00</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Automatic</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">245 MB</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Success</span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-900">Download</button>
+                                        <button class="text-green-600 hover:text-green-900">Restore</button>
+                                        <button class="text-red-600 hover:text-red-900">Delete</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Tab -->
+        <div id="maintenance-tab" class="tab-content p-6 hidden">
+            <h3 class="text-lg font-medium text-gray-900 mb-6">System Maintenance</h3>
+            
+            <div class="space-y-6">
+                <!-- System Status -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">System Status</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-lg border">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                <span class="text-sm font-medium">Database</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Connected and healthy</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                                <span class="text-sm font-medium">Email Service</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Operational</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                                <span class="text-sm font-medium">Storage</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">75% capacity</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maintenance Actions -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Maintenance Actions</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg text-left">
+                            <div class="font-medium">Clear Cache</div>
+                            <div class="text-sm opacity-90">Clear application cache</div>
+                        </button>
+                        <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg text-left">
+                            <div class="font-medium">Optimize Database</div>
+                            <div class="text-sm opacity-90">Optimize database tables</div>
+                        </button>
+                        <button class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg text-left">
+                            <div class="font-medium">Clean Logs</div>
+                            <div class="text-sm opacity-90">Remove old log files</div>
+                        </button>
+                        <button class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg text-left">
+                            <div class="font-medium">Update System</div>
+                            <div class="text-sm opacity-90">Check for updates</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Tab -->
+        <div id="advanced-tab" class="tab-content p-6 hidden">
+            <h3 class="text-lg font-medium text-gray-900 mb-6">Advanced Settings</h3>
+            
+            <div class="space-y-6">
+                <!-- API Configuration -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">API Configuration</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">API Rate Limit (requests per minute)</label>
+                            <input type="number" value="100" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Enable API Documentation</label>
+                                <p class="text-sm text-gray-500">Make API documentation publicly available</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Settings -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Database Settings</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Connection Pool Size</label>
+                            <input type="number" value="20" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Query Timeout (seconds)</label>
+                            <input type="number" value="30" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logging Configuration -->
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-md font-medium text-gray-900 mb-4">Logging Configuration</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Log Level</label>
+                            <select class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="DEBUG">Debug</option>
+                                <option value="INFO" selected>Info</option>
+                                <option value="WARNING">Warning</option>
+                                <option value="ERROR">Error</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Enable Audit Logging</label>
+                                <p class="text-sm text-gray-500">Log all user actions for compliance</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showTab(tabName) {
+    // Hide all tab contents
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.add('hidden'));
+    
+    // Remove active class from all tab buttons
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active', 'border-blue-500', 'text-blue-600');
+        button.classList.add('border-transparent', 'text-gray-500');
+    });
+    
+    // Show selected tab content
+    document.getElementById(tabName + '-tab').classList.remove('hidden');
+    
+    // Add active class to selected tab button
+    const activeButton = document.getElementById('tab-' + tabName);
+    activeButton.classList.add('active', 'border-blue-500', 'text-blue-600');
+    activeButton.classList.remove('border-transparent', 'text-gray-500');
+}
+
+function saveAllSettings() {
+    // Implement save functionality
+    alert('Settings saved successfully!');
+}
+
+function exportSettings() {
+    // Implement export functionality
+    alert('Settings exported successfully!');
+}
+
+// Initialize with general tab active
+document.addEventListener('DOMContentLoaded', function() {
+    showTab('general');
+});
+</script>
+
+<style>
+.tab-button.active {
+    border-color: #3B82F6;
+    color: #3B82F6;
+}
+</style>
+{% endblock %}
+

@@ -1,0 +1,348 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard - CareConnect{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_description %}System overview and key metrics{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Users -->
+    <div class="stat-card blue text-white p-6 rounded-xl shadow-lg card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-blue-100 text-sm font-medium">Total Users</p>
+                <p class="text-3xl font-bold">{{ stats.total_users }}</p>
+                <p class="text-blue-100 text-xs mt-1">All registered users</p>
+            </div>
+            <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                <i class="fas fa-users text-2xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Daycares -->
+    <div class="stat-card green text-white p-6 rounded-xl shadow-lg card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-green-100 text-sm font-medium">Active Daycares</p>
+                <p class="text-3xl font-bold">{{ stats.active_daycares }}</p>
+                <p class="text-green-100 text-xs mt-1">Currently operational</p>
+            </div>
+            <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                <i class="fas fa-building text-2xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Total Children -->
+    <div class="stat-card orange text-white p-6 rounded-xl shadow-lg card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-pink-100 text-sm font-medium">Total Children</p>
+                <p class="text-3xl font-bold">{{ stats.total_children }}</p>
+                <p class="text-pink-100 text-xs mt-1">Enrolled children</p>
+            </div>
+            <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                <i class="fas fa-child text-2xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Incidents -->
+    <div class="stat-card purple text-white p-6 rounded-xl shadow-lg card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-blue-100 text-sm font-medium">Recent Incidents</p>
+                <p class="text-3xl font-bold">{{ stats.recent_incidents }}</p>
+                <p class="text-blue-100 text-xs mt-1">Serious/Emergency</p>
+            </div>
+            <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                <i class="fas fa-exclamation-triangle text-2xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Statistics -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-xl shadow-lg card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-gray-600 text-sm font-medium">Total Activities</p>
+                <p class="text-2xl font-bold text-gray-800">{{ stats.total_activities }}</p>
+            </div>
+            <div class="bg-blue-100 p-3 rounded-full">
+                <i class="fas fa-calendar-alt text-blue-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-xl shadow-lg card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-gray-600 text-sm font-medium">Total Payments</p>
+                <p class="text-2xl font-bold text-gray-800">{{ stats.total_payments }}</p>
+            </div>
+            <div class="bg-green-100 p-3 rounded-full">
+                <i class="fas fa-credit-card text-green-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-xl shadow-lg card">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-gray-600 text-sm font-medium">Pending Registrations</p>
+                <p class="text-2xl font-bold text-gray-800">{{ stats.pending_registrations }}</p>
+            </div>
+            <div class="bg-yellow-100 p-3 rounded-full">
+                <i class="fas fa-clock text-yellow-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Data Visualization -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Monthly Registrations Chart -->
+    <div class="bg-white p-6 rounded-xl shadow-lg card">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-chart-line mr-2 text-blue-600"></i>
+            Monthly Registrations
+        </h3>
+        <canvas id="registrationsChart" width="400" height="200"></canvas>
+    </div>
+    
+    <!-- User Types Distribution -->
+    <div class="bg-white p-6 rounded-xl shadow-lg card">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-chart-pie mr-2 text-green-600"></i>
+            User Distribution
+        </h3>
+        <canvas id="userTypesChart" width="400" height="200"></canvas>
+    </div>
+</div>
+
+<!-- Recent Activities and Incidents -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Recent Activities -->
+    <div class="bg-white p-6 rounded-xl shadow-lg card">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">
+                <i class="fas fa-clock mr-2 text-blue-600"></i>
+                Recent Activities
+            </h3>
+            <a href="{{ url_for('admin_web.activities') }}" class="text-blue-600 hover:text-blue-800 text-sm">
+                View All <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        
+        {% if recent_activities %}
+            <div class="space-y-3">
+                {% for activity in recent_activities %}
+                <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-play text-blue-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">{{ activity.activity_title }}</p>
+                        <p class="text-sm text-gray-600">
+                            {{ activity.child.first_name }} {{ activity.child.last_name }}
+                            {% if activity.activity_date %}
+                            • {{ activity.activity_date.strftime('%b %d, %Y') }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        {{ activity.activity_type|title }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-calendar-alt text-4xl mb-3"></i>
+                <p>No recent activities</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Recent Incidents -->
+    <div class="bg-white p-6 rounded-xl shadow-lg card">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">
+                <i class="fas fa-exclamation-triangle mr-2 text-red-600"></i>
+                Recent Incidents
+            </h3>
+            <a href="{{ url_for('admin_web.incidents') }}" class="text-red-600 hover:text-red-800 text-sm">
+                View All <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        
+        {% if recent_incidents %}
+            <div class="space-y-3">
+                {% for incident in recent_incidents %}
+                <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <div class="w-10 h-10 {% if incident.severity == 'serious' %}bg-red-100{% elif incident.severity == 'moderate' %}bg-yellow-100{% else %}bg-green-100{% endif %} rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-exclamation-triangle {% if incident.severity == 'serious' %}text-red-600{% elif incident.severity == 'moderate' %}text-yellow-600{% else %}text-green-600{% endif %}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">{{ incident.incident_type|title }}</p>
+                        <p class="text-sm text-gray-600">
+                            {{ incident.child.first_name }} {{ incident.child.last_name }}
+                            • {{ incident.incident_date.strftime('%b %d, %Y') if incident.incident_date }}
+                        </p>
+                    </div>
+                    <span class="px-2 py-1 {% if incident.severity == 'serious' %}bg-red-100 text-red-800{% elif incident.severity == 'moderate' %}bg-yellow-100 text-yellow-800{% else %}bg-green-100 text-green-800{% endif %} text-xs rounded-full">
+                        {{ incident.severity|title }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-shield-alt text-4xl mb-3"></i>
+                <p>No recent incidents</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="mt-8">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-bolt mr-2 text-yellow-600"></i>
+        Quick Actions
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="{{ url_for('admin_web.export_data', entity_type='users') }}" 
+           class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 text-center">
+            <i class="fas fa-download text-blue-600 text-2xl mb-2"></i>
+            <p class="font-medium text-gray-800">Export Users</p>
+            <p class="text-sm text-gray-600">Download CSV</p>
+        </a>
+        
+        <a href="{{ url_for('admin_web.export_data', entity_type='daycares') }}" 
+           class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 text-center">
+            <i class="fas fa-download text-green-600 text-2xl mb-2"></i>
+            <p class="font-medium text-gray-800">Export Daycares</p>
+            <p class="text-sm text-gray-600">Download CSV</p>
+        </a>
+        
+        <a href="{{ url_for('admin_web.export_data', entity_type='children') }}" 
+           class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 text-center">
+            <i class="fas fa-download text-purple-600 text-2xl mb-2"></i>
+            <p class="font-medium text-gray-800">Export Children</p>
+            <p class="text-sm text-gray-600">Download CSV</p>
+        </a>
+        
+        <a href="{{ url_for('admin_web.export_data', entity_type='incidents') }}" 
+           class="bg-white p-4 rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 text-center">
+            <i class="fas fa-download text-red-600 text-2xl mb-2"></i>
+            <p class="font-medium text-gray-800">Export Incidents</p>
+            <p class="text-sm text-gray-600">Download CSV</p>
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Monthly Registrations Chart
+const registrationsCtx = document.getElementById('registrationsChart').getContext('2d');
+const registrationsChart = new Chart(registrationsCtx, {
+    type: 'line',
+    data: {
+        labels: [
+            {% for reg in monthly_registrations %}
+            '{{ reg.month }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            label: 'New Registrations',
+            data: [
+                {% for reg in monthly_registrations %}
+                {{ reg.count }},
+                {% endfor %}
+            ],
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.1)'
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+
+// User Types Distribution Chart
+const userTypesCtx = document.getElementById('userTypesChart').getContext('2d');
+const userTypesChart = new Chart(userTypesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Daycares', 'Parents', 'Admins'],
+        datasets: [{
+            data: [{{ stats.total_daycares }}, {{ stats.total_parents }}, 1],
+            backgroundColor: [
+                'rgba(34, 197, 94, 0.8)',
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(168, 85, 247, 0.8)'
+            ],
+            borderColor: [
+                'rgba(34, 197, 94, 1)',
+                'rgba(59, 130, 246, 1)',
+                'rgba(168, 85, 247, 1)'
+            ],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            }
+        }
+    }
+});
+
+// Auto-refresh statistics every 30 seconds
+setInterval(function() {
+    fetch('/admin/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            // Update statistics if needed
+            console.log('Stats updated:', data);
+        })
+        .catch(error => console.error('Error fetching stats:', error));
+}, 30000);
+</script>
+{% endblock %}
+
