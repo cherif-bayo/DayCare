@@ -222,8 +222,8 @@ export const apiCall = async (url, options = {}) => {
     
     // In development, try real API first, fallback to mock
     try {
-      const response = await fetch(url, options);
-      return response;
+      return await fetch(url, options);
+      
     } catch (error) {
       console.warn('Real API failed, using mock API:', error);
       return await mockApiCall(url, options);

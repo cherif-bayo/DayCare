@@ -226,7 +226,7 @@ const DaycareDashboard = () => {
       console.log('🔍 Debug Info:');
       console.log('Access Token:', accessToken);
       console.log('User:', user);
-      console.log('User Role:', user?.role);
+      console.log('User Role:', user?.user_type);
       
       if (!accessToken) {
         toast.error('No authentication token found. Please log in again.');

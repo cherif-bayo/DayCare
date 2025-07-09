@@ -58,7 +58,7 @@ def login():
         db.session.commit()
         
         # Create tokens
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))  # ✅ cast to string
         refresh_token = create_refresh_token(identity=user.id)
         
         return jsonify({

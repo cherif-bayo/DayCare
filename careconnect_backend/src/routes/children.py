@@ -45,6 +45,8 @@ def get_child(child_id):
 @children_bp.route('', methods=['POST'])
 @jwt_required()
 def create_child():
+    user_id = get_jwt_identity()
+    print("[DEBUG] JWT identity:", user_id)  # 👈 Add this line
     daycare_id = _get_daycare_id_for_current_user()
     if daycare_id is None:
         return jsonify({ 'error': { 'code': 'FORBIDDEN', 'message': 'Not a daycare user' }}), 403

@@ -38,6 +38,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'careconnect-secret-key-
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
+print("[DEBUG] JWT_SECRET_KEY:", app.config['JWT_SECRET_KEY'])
 
 # Database configuration
 # Database configuration
@@ -60,7 +61,7 @@ app.register_blueprint(admin_web_bp)  # Admin web interface (no prefix)
 app.register_blueprint(daycare_bp, url_prefix='/api/daycare')
 app.register_blueprint(parent_bp, url_prefix='/api/parent')
 app.register_blueprint(public_bp, url_prefix='/api/public')
-app.register_blueprint(children_bp, url_prefix='/api/daycare/children')
+# app.register_blueprint(children_bp, url_prefix='/api/daycare/children')
 
 # Create database tables
 with app.app_context():
@@ -110,17 +111,20 @@ with app.app_context():
     db.session.commit()
 
 # JWT error handlers
-@jwt.expired_token_loader
-def expired_token_callback(jwt_header, jwt_payload):
-    return {'error': {'code': 'TOKEN_EXPIRED', 'message': 'Token has expired'}}, 401
-
 @jwt.invalid_token_loader
 def invalid_token_callback(error):
+    print("[JWT DEBUG] Invalid token:", error)
     return {'error': {'code': 'INVALID_TOKEN', 'message': 'Invalid token'}}, 401
 
 @jwt.unauthorized_loader
 def missing_token_callback(error):
+    print("[JWT DEBUG] Unauthorized:", error)
     return {'error': {'code': 'AUTHENTICATION_REQUIRED', 'message': 'Authentication token required'}}, 401
+
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    print("[JWT DEBUG] Token expired")
+    return {'error': {'code': 'TOKEN_EXPIRED', 'message': 'Token has expired'}}, 401
 
 # Health check endpoint
 @app.route('/api/health')

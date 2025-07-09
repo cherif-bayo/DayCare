@@ -197,9 +197,9 @@ export const AuthProvider = ({ children }) => {
     logout,
     isAuthenticated: !!user,
     isHoster: user?.role === 'admin',
-    isDaycare: user?.role === 'daycare',
-    isParent: user?.role === 'parent',
-    isAdmin: user?.role === 'admin',
+    isDaycare: user?.user_type === 'daycare',
+    isParent: user?.user_type === 'parent', 
+    isAdmin: user?.user_type === 'admin',
   };
 
   return (
