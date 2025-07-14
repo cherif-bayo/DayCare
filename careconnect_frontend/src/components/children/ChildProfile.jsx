@@ -1,28 +1,119 @@
-import React from 'react';
+// src/components/children/ChildProfile.jsx
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
+import EditChildForm from "./EditChildForm";
+import { labelOfAgeGroup } from '../../lib/ageGroup';
+import { deserializeAccess } from "@/lib/helpers";
 
-const ChildProfile = ({ child, onBack }) => {
+const ChildProfile = ({ child: initialChild, onBack }) => {
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
+  const [child, setChild] = useState(initialChild);
+  const [editMode, setEditMode] = useState(false);
 
-  const getInitials = (firstName, lastName) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
+  useEffect(() => {
+    setChild(initialChild);
+  }, [initialChild]);
+
+  /* ---------- helpers ---------- */
+  const getInitials = (firstName = '', lastName = '') =>
+    `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
 
   const getSeverityColor = (severity) => {
     switch (severity) {
-      case 'mild':
-        return 'bg-blue-100 text-blue-800';
-      case 'moderate':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'life_threatening':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'mild':             return 'bg-blue-100 text-blue-800';
+      case 'moderate':         return 'bg-yellow-100 text-yellow-800';
+      case 'life_threatening': return 'bg-red-100 text-red-800';
+      default:                 return 'bg-gray-100 text-gray-800';
     }
   };
 
+  /* ---------- loading guard ---------- */
+  if (!child) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600" />
+        <p className="ml-4 text-gray-600">{t('common.loading')}</p>
+      </div>
+    );
+  }
+  // 4) medical info — guarantee arrays even when API is flat
+  const medRaw = child.medical_info || {};
+  const arr = (v) => (Array.isArray(v) ? v : []);     
+  const medicalInfo = {
+    allergies: arr(medRaw.allergies).length
+      ? medRaw.allergies
+      : child.allergies
+        ? [{ name: child.allergies, severity: 'mild', description: '' }]
+        : [],
+    medications: arr(medRaw.medications).length
+      ? medRaw.medications
+      : child.emergency_medications
+        ? [{ name: child.emergency_medications, dosage: '', purpose: '' }]
+        : [],
+    conditions: arr(medRaw.conditions).length
+      ? medRaw.conditions
+      : child.medical_conditions
+        ? [{ name: child.medical_conditions, severity: 'moderate', description: '' }]
+        : []
+  };
+
+  if (editMode) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center py-4">
+              <button
+                onClick={() => setEditMode(false)}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                ← {t("backToProfile")}
+              </button>
+              <h1 className="text-xl font-bold text-gray-900">{t("editChild")}</h1>
+              <div />
+            </div>
+          </div>
+        </div>
+  
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <EditChildForm
+            child={{ ...child, medical_info: medicalInfo }}
+            onCancel={() => setEditMode(false)}
+            onSaved={(updated) => {
+              setChild(updated);
+              setEditMode(false);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }  
+
+  /* ---------- NORMALISE back-end shapes ---------- */
+
+
+  // 1) parents
+  const parents = Array.isArray(child.parents)
+    ? child.parents
+    : child.parent
+      ? [child.parent]
+      : [];
+
+  // 2) emergency contacts
+  const emergencyContacts = Array.isArray(child.emergency_contacts)
+    ? child.emergency_contacts
+    : [];
+
+  const accessPermissions = deserializeAccess(
+    child.access_permissions ?? child.pickup_authorization
+  );
+
+  // 3) incidents
+  const recentIncidents = arr(child.recent_incidents);
+
+  /* ---------- render ---------- */
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -42,12 +133,15 @@ const ChildProfile = ({ child, onBack }) => {
                   <span className="text-white font-bold text-lg">♥</span>
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">LittleSteps</h1>
+                  <h1 className="text-xl font-bold text-gray-900">CareConnect</h1>
                   <p className="text-sm text-gray-500">Canada</p>
                 </div>
               </div>
             </div>
-            <button className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2">
+            <button
+              onClick={() => setEditMode(true)}
+              className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+            >
               <span>✏️</span>
               <span>{t('editChild')}</span>
             </button>
@@ -69,9 +163,9 @@ const ChildProfile = ({ child, onBack }) => {
               {child.first_name} {child.last_name}
             </h2>
             <div className="flex items-center space-x-4 mt-2">
-              <span className="text-gray-600">{t('age')}: {child.age} years</span>
+              <span className="text-gray-600">{t('age')}: {child.age ?? t('unknown')}</span>
               <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                {child.status}
+                {child.status ?? t('unknown')}
               </span>
             </div>
           </div>
@@ -90,21 +184,21 @@ const ChildProfile = ({ child, onBack }) => {
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label className="text-sm font-medium text-gray-600">{t('dateOfBirth')}</label>
-                  <p className="text-gray-900 mt-1">{child.date_of_birth}</p>
+                  <p className="text-gray-900 mt-1">{child.date_of_birth ?? t('n/a')}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">{t('ageGroup')}</label>
-                  <p className="text-gray-900 mt-1">{child.age_group}</p>
+                  <p className="text-gray-900 mt-1">{labelOfAgeGroup(child.age_group) || t('n/a')}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">{t('enrollmentDate')}</label>
-                  <p className="text-gray-900 mt-1">{child.enrollment_date}</p>
+                  <p className="text-gray-900 mt-1">{child.enrollment_date ?? t('n/a')}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600">{t('status')}</label>
                   <div className="mt-1">
                     <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                      {child.status}
+                      {child.status ?? t('n/a')}
                     </span>
                   </div>
                 </div>
@@ -117,32 +211,46 @@ const ChildProfile = ({ child, onBack }) => {
                 <span className="text-purple-600">👥</span>
                 <h3 className="text-lg font-bold text-gray-900">{t('parentGuardianInformation')}</h3>
               </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-bold text-gray-900 text-lg">{child.parent.name}</p>
-                    <div className="flex items-center space-x-6 mt-2 text-sm text-gray-600">
-                      <div className="flex items-center space-x-1">
-                        <span>✉️</span>
-                        <span>{child.parent.email}</span>
+              {parents.length > 0 ? (
+                parents.map((p, idx) => (
+                  <div key={idx} className="p-4 bg-gray-50 rounded-lg mb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-900 text-lg">
+                          {p.first_name} {p.last_name}
+                        </p>
+                        <div className="flex items-center space-x-6 mt-2 text-sm text-gray-600">
+                          <div className="flex items-center space-x-1">
+                            <span>✉️</span>
+                            <span>{p.email}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <span>📞</span>
+                            <span>{p.phone}</span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {t('relation')}: {p.relation ?? t('n/a')}
+                        </p>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <span>📞</span>
-                        <span>{child.parent.phone}</span>
+                      <div className="flex space-x-2">
+                        {p.is_primary && (
+                          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                            {t('primary')}
+                          </span>
+                        )}
+                        {p.can_pick_up && (
+                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                            {t('canPickup')}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">Relation: {child.parent.relation}</p>
                   </div>
-                  <div className="flex space-x-2">
-                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                      Primary
-                    </span>
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                      Can Pickup
-                    </span>
-                  </div>
-                </div>
-              </div>
+                ))
+              ) : (
+                <p className="text-gray-500">{t('noParent')}</p>
+              )}
             </div>
 
             {/* Emergency Contacts */}
@@ -152,22 +260,54 @@ const ChildProfile = ({ child, onBack }) => {
                 <h3 className="text-lg font-bold text-gray-900">{t('emergencyContacts')}</h3>
               </div>
               <div className="space-y-4">
-                {child.emergency_contacts.map((contact, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-gray-900">{contact.name}</p>
-                        <p className="text-sm text-gray-600">{contact.relation}</p>
-                      </div>
-                      <div className="flex items-center space-x-1 text-sm text-gray-600">
-                        <span>📞</span>
-                        <span>{contact.phone}</span>
+                {emergencyContacts.length > 0 ? (
+                  emergencyContacts.map((c, index) => (
+                    <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-gray-900">{c.name}</p>
+                          <p className="text-sm text-gray-600">{c.relation}</p>
+                        </div>
+                        <div className="flex items-center space-x-1 text-sm text-gray-600">
+                          <span>📞</span>
+                          <span>{c.phone}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-gray-500">{t('noEmergencyContacts')}</p>
+                )}
               </div>
             </div>
+            {/* Access / Pick-up Permissions */}
+            <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="flex items-center space-x-2 mb-6">
+                <span className="text-yellow-600">🛡️</span>
+                <h3 className="text-lg font-bold text-gray-900">{t('accessPermissions')}</h3>
+              </div>
+              <div className="space-y-4">
+                {accessPermissions.length ? (
+                  accessPermissions.map((p,i)=>(
+                    <div key={i} className="p-4 bg-gray-50 rounded-lg flex justify-between">
+                      <div>
+                        <p className="font-bold">{p.name}</p>
+                        <p className="text-sm text-gray-600">{p.relation}</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span>📞</span><span>{p.phone}</span>
+                        {p.is_authorized
+                          ? <span className="ml-4 bg-green-100 text-green-800 px-2 py-1 text-xs rounded">{t('allowed')}</span>
+                          : <span className="ml-4 bg-red-100 text-red-800 px-2 py-1 text-xs rounded">{t('notAllowed')}</span>}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500">{t('noAccessPermissions')}</p>
+                )}
+              </div>
+            </div>
+
 
             {/* Medical Information Grid */}
             <div className="grid md:grid-cols-3 gap-6">
@@ -177,19 +317,21 @@ const ChildProfile = ({ child, onBack }) => {
                   <span className="text-red-600">♥️</span>
                   <h3 className="text-lg font-bold text-gray-900">{t('allergies')}</h3>
                 </div>
-                <div className="space-y-3">
-                  {child.medical_info.allergies.map((allergy, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                {medicalInfo.allergies.length > 0 ? (
+                  medicalInfo.allergies.map((a, i) => (
+                    <div key={i} className="p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="font-bold text-gray-900">{allergy.name}</p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(allergy.severity)}`}>
-                          {allergy.severity}
+                        <p className="font-bold text-gray-900">{a.name}</p>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(a.severity)}`}>
+                          {a.severity}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600">{allergy.description}</p>
+                      <p className="text-sm text-gray-600">{a.description}</p>
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500">{t('noAllergies')}</p>
+                )}
               </div>
 
               {/* Medications */}
@@ -198,15 +340,17 @@ const ChildProfile = ({ child, onBack }) => {
                   <span className="text-blue-600">💊</span>
                   <h3 className="text-lg font-bold text-gray-900">{t('medications')}</h3>
                 </div>
-                <div className="space-y-3">
-                  {child.medical_info.medications.map((medication, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                      <p className="font-bold text-gray-900">{medication.name}</p>
-                      <p className="text-sm text-gray-600 mt-1">{medication.dosage}</p>
-                      <p className="text-xs text-gray-500 mt-1">{medication.purpose}</p>
+                {medicalInfo.medications.length > 0 ? (
+                  medicalInfo.medications.map((m, i) => (
+                    <div key={i} className="p-3 bg-gray-50 rounded-lg">
+                      <p className="font-bold text-gray-900">{m.name}</p>
+                      <p className="text-sm text-gray-600 mt-1">{m.dosage}</p>
+                      <p className="text-xs text-gray-500 mt-1">{m.purpose}</p>
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500">{t('noMedications')}</p>
+                )}
               </div>
 
               {/* Medical Conditions */}
@@ -215,19 +359,21 @@ const ChildProfile = ({ child, onBack }) => {
                   <span className="text-orange-600">⭕</span>
                   <h3 className="text-lg font-bold text-gray-900">{t('medicalConditions')}</h3>
                 </div>
-                <div className="space-y-3">
-                  {child.medical_info.conditions.map((condition, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                {medicalInfo.conditions.length > 0 ? (
+                  medicalInfo.conditions.map((c, i) => (
+                    <div key={i} className="p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="font-bold text-gray-900">{condition.name}</p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(condition.severity)}`}>
-                          {condition.severity}
+                        <p className="font-bold text-gray-900">{c.name}</p>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(c.severity)}`}>
+                          {c.severity}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600">{condition.description}</p>
+                      <p className="text-sm text-gray-600">{c.description}</p>
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500">{t('noConditions')}</p>
+                )}
               </div>
             </div>
           </div>
@@ -259,18 +405,22 @@ const ChildProfile = ({ child, onBack }) => {
                 <h3 className="text-lg font-bold text-gray-900">{t('recentIncidents')}</h3>
               </div>
               <div className="space-y-3">
-                {child.recent_incidents.map((incident, index) => (
-                  <div key={index} className="p-3 bg-red-50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="font-bold text-gray-900">{incident.type}</p>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(incident.severity)}`}>
-                        {incident.severity}
-                      </span>
+                {recentIncidents.length > 0 ? (
+                  recentIncidents.map((incident, index) => (
+                    <div key={index} className="p-3 bg-red-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-bold text-gray-900">{incident.type}</p>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(incident.severity)}`}>
+                          {incident.severity}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">{incident.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">{incident.date}</p>
                     </div>
-                    <p className="text-sm text-gray-600">{incident.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">{incident.date}</p>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-gray-500">{t('noRecentIncidents')}</p>
+                )}
               </div>
             </div>
           </div>
@@ -315,4 +465,3 @@ const ChildProfile = ({ child, onBack }) => {
 };
 
 export default ChildProfile;
-

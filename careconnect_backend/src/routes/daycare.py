@@ -126,43 +126,43 @@ def list_children():
             }
         }), 500
 
-@daycare_bp.route('/children', methods=['POST'])
-@jwt_required()
-@require_daycare_staff()
-def create_child():
-    try:
-        staff = get_daycare_staff()
-        data = request.get_json()
+# @daycare_bp.route('/children', methods=['POST'])
+# @jwt_required()
+# @require_daycare_staff()
+# def create_child():
+#     try:
+#         staff = get_daycare_staff()
+#         data = request.get_json()
         
-        if not data:
-            return jsonify({
-                'error': {
-                    'code': 'VALIDATION_ERROR',
-                    'message': 'Request data is required'
-                }
-            }), 422
+#         if not data:
+#             return jsonify({
+#                 'error': {
+#                     'code': 'VALIDATION_ERROR',
+#                     'message': 'Request data is required'
+#                 }
+#             }), 422
         
-        # Validate required fields
-        required_fields = ['first_name', 'last_name', 'date_of_birth']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({
-                    'error': {
-                        'code': 'VALIDATION_ERROR',
-                        'message': f'{field} is required'
-                    }
-                }), 422
+#         # Validate required fields
+#         required_fields = ['first_name', 'last_name', 'date_of_birth']
+#         for field in required_fields:
+#             if not data.get(field):
+#                 return jsonify({
+#                     'error': {
+#                         'code': 'VALIDATION_ERROR',
+#                         'message': f'{field} is required'
+#                     }
+#                 }), 422
         
-        # Parse date of birth
-        try:
-            dob = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
-        except ValueError:
-            return jsonify({
-                'error': {
-                    'code': 'VALIDATION_ERROR',
-                    'message': 'Invalid date format. Use YYYY-MM-DD'
-                }
-            }), 422
+#         # Parse date of birth
+#         try:
+#             dob = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
+#         except ValueError:
+#             return jsonify({
+#                 'error': {
+#                     'code': 'VALIDATION_ERROR',
+#                     'message': 'Invalid date format. Use YYYY-MM-DD'
+#                 }
+#             }), 422
         
         # Parse enrollment date if provided
         enrollment_date = None

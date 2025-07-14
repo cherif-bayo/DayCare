@@ -25,6 +25,8 @@ export const API_ENDPOINTS = {
   DAYCARE_INCIDENTS: `${API_BASE_URL}/api/daycare/incidents`,
   DAYCARE_INVOICES: `${API_BASE_URL}/api/daycare/invoices`,
   DAYCARE_PAYMENTS: `${API_BASE_URL}/api/daycare/payments`,
+  DAYCARE_STAFF:      "/api/daycare/staff",
+  DAYCARE_CHILDREN:   "/api/daycare/children",
   
   // Parent endpoints
   PARENT_DASHBOARD: `${API_BASE_URL}/api/parent/dashboard`,
@@ -36,6 +38,11 @@ export const API_ENDPOINTS = {
   // Public endpoints
   PUBLIC_HEALTH: `${API_BASE_URL}/api/public/health`,
   PUBLIC_INVITATION: `${API_BASE_URL}/api/public/invitation`,
+
+  // GET Children Stats API
+  DAYCARE_CHILDREN: '/api/daycare/children',
+  DAYCARE_STATS:    '/api/daycare/children/stats',
+  AGE_GROUPS: '/api/daycare/age-groups',
 };
 
 // HTTP client configuration

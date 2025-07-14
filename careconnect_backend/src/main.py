@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from datetime import timedelta
+from flask_migrate import Migrate
 load_dotenv()
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -22,6 +23,8 @@ from src.models.incident import Incident, IncidentFollowup
 from src.models.payment import PaymentPlan, ChildPaymentAssignment, Invoice, InvoiceLineItem, Payment
 from src.models.activity import Activity, ChildActivityParticipation, Message, AuditLog, SystemSetting
 from src.routes.children import children_bp
+from src.models.age_group import AgeGroup, AgeGroupHelper
+
 
 # Import routes
 from src.routes.auth import auth_bp
@@ -30,15 +33,21 @@ from src.routes.admin_web import admin_web_bp
 from src.routes.daycare import daycare_bp
 from src.routes.parent import parent_bp
 from src.routes.public import public_bp
+from src.routes.age_groups import age_groups_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
+
+# Enable Flask’s debug logging
+app.config['DEBUG'] = True
+import logging
+app.logger.setLevel(logging.DEBUG)
 
 # Configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'careconnect-secret-key-change-in-production')
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-key-change-in-production')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
-print("[DEBUG] JWT_SECRET_KEY:", app.config['JWT_SECRET_KEY'])
+# print("[DEBUG] JWT_SECRET_KEY:", app.config['JWT_SECRET_KEY'])
 
 # Database configuration
 # Database configuration
@@ -50,6 +59,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize extensions
 db.init_app(app)
+migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 CORS(app, origins="*")  # Allow all origins for development
@@ -58,14 +68,19 @@ CORS(app, origins="*")  # Allow all origins for development
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(admin_bp, url_prefix='/api/admin')
 app.register_blueprint(admin_web_bp)  # Admin web interface (no prefix)
-app.register_blueprint(daycare_bp, url_prefix='/api/daycare')
+
 app.register_blueprint(parent_bp, url_prefix='/api/parent')
 app.register_blueprint(public_bp, url_prefix='/api/public')
-# app.register_blueprint(children_bp, url_prefix='/api/daycare/children')
+app.register_blueprint(children_bp, url_prefix='/api/daycare/children')
+app.register_blueprint(daycare_bp, url_prefix='/api/daycare')
+app.register_blueprint(age_groups_bp, url_prefix="/api/daycare/age-groups")
 
 # Create database tables
 with app.app_context():
     db.create_all()
+
+    # NEW: Ensure standard age groups exist
+    AgeGroupHelper.ensure_standard_age_groups()
     
     # Create default system settings
     if not SystemSetting.query.filter_by(setting_key='app_name').first():

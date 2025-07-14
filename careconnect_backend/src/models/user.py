@@ -1,3 +1,4 @@
+# careconnect_backend/src/models/user.py
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import datetime, date
@@ -241,6 +242,15 @@ class DaycareStaff(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     permissions = db.Column(db.Text)  # JSON string
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # NEW ✔️  children this staff member is assigned to
+    # (indent at the same level as columns, *inside* the class)
+    children = db.relationship(
+        "Child",
+        secondary="child_staff",   # ← string to avoid circular import
+        back_populates="staff",
+        lazy="selectin",           # any loader strategy is fine
+    )
     
     __table_args__ = (db.UniqueConstraint('user_id', 'daycare_id', name='unique_user_daycare'),)
     
@@ -261,6 +271,8 @@ class DaycareStaff(db.Model):
             'permissions': self.get_permissions(),
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+    
+
 
 class Parent(db.Model):
     __tablename__ = 'parents'

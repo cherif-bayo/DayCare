@@ -7,6 +7,9 @@ import { apiCall } from '../../lib/mockApi';
 import { API_ENDPOINTS } from '../../lib/config';
 import ChildrenManagement from '../children/ChildrenManagement';
 import { toast } from 'react-hot-toast';
+import { useDaycareStats } from '../../hooks/useDaycareStats';
+import ManageAgeGroupsForm from "../age-groups/ManageAgeGroupsForm";
+import { serializeAccess, deserializeAccess } from "@/lib/helpers";
 
 const DaycareDashboard = () => {
   const { user, logout, accessToken } = useAuth();
@@ -15,14 +18,9 @@ const DaycareDashboard = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
-  const [dashboardData, setDashboardData] = useState({
-    enrolled_children: 0,
-    active_staff: 0,
-    present_today: 0,
-    todays_activities: 0,
-    recent_incidents: 0,
-    waitlisted: 0
-  });
+  const { stats: dashboardData, loading: statsLoading } = useDaycareStats();
+  const [childFilter, setChildFilter] = useState('all');
+  
   const [recentActivities, setRecentActivities] = useState([
     {
       id: 1,
@@ -84,20 +82,24 @@ const DaycareDashboard = () => {
     setShowModal(true);
   };
 
-  const StatCard = ({ title, value, icon, color }) => (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
-        </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          {icon}
-        </div>
+  const StatCard = ({ title, value, icon, color, loading, onClick }) => (
+    <button
+      onClick={onClick}
+      className="cursor-pointer bg-white rounded-lg p-6 shadow-sm border border-gray-100 flex items-center justify-between w-full hover:shadow-md transition-shadow"
+    >
+      <div>
+        <p className="text-sm font-medium text-gray-600">{title}</p>
+        {loading
+          ? <div className="animate-spin h-6 w-6 border-4 border-teal-600 border-t-transparent rounded-full mt-2" />
+          : <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+        }
       </div>
-    </div>
+      <div className={`p-3 rounded-lg ${color}`}>
+        {icon}
+      </div>
+    </button>
   );
-
+  
   const QuickActionButton = ({ title, icon, color, onClick }) => (
     <button
       onClick={onClick}
@@ -132,7 +134,8 @@ const DaycareDashboard = () => {
   const AddChildForm = ({ onSuccess, onCancel }) => {
     const [parents, setParents] = useState([{
       id: 1,
-      name: '',
+      firstName: '',
+      lastName: '',
       email: '',
       phone: '',
       relation: 'Mother',
@@ -147,6 +150,10 @@ const DaycareDashboard = () => {
       relation: ''
     }]);
 
+    const [accessRows, setAccessRows] = useState([{
+      id:1, name:'', phone:'', relation:'', is_authorized:true
+    }]);
+
     const [selectedAllergies, setSelectedAllergies] = useState([]);
     const [selectedMedications, setSelectedMedications] = useState([]);
     const [selectedConditions, setSelectedConditions] = useState([]);
@@ -158,7 +165,8 @@ const DaycareDashboard = () => {
     const addParent = () => {
       setParents([...parents, {
         id: Date.now(),
-        name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
         relation: 'Father',
@@ -240,21 +248,31 @@ const DaycareDashboard = () => {
 
       // Prepare payload matching database structure exactly
       const payload = {
-        first_name: firstName,
-        last_name: lastName,
-        date_of_birth: dob,
-        gender: gender || null,
-        medical_conditions: medicalConditions || null,
-        allergies: allergies || null,
-        dietary_restrictions: dietaryRestrictions || null,
-        emergency_medications: emergencyMedications || null,
-        photo_url: photoUrl || null,
-        enrollment_date: enrollmentDate || null,
-        status: status,
-        room_assignment: roomAssignment || null,
-        pickup_authorization: pickupAuthorization,
-        notes: notes || null,
-        primary_parent_id: Number(primaryParentId)
+        parents: parents.map(p => ({
+          first_name:      p.firstName,
+          last_name:       p.lastName,
+          email:           p.email,
+          phone:           p.phone,
+          relation:        p.relation,
+          is_primary:      p.isPrimary,   // if your server wants it
+          can_pick_up:     p.canPickUp    // ditto
+        })),
+        child: {
+          first_name: firstName,
+          last_name:  lastName,
+          date_of_birth: dob,
+          gender: gender || null,
+          medical_conditions: medicalConditions || null,
+          allergies: allergies || null,
+          dietary_restrictions: dietaryRestrictions || null,
+          emergency_medications: emergencyMedications || null,
+          photo_url: photoUrl || null,
+          enrollment_date: enrollmentDate || null,
+          status,
+          room_assignment: roomAssignment || null,
+          pickup_authorization: pickupAuthorization,
+          notes: notes || null
+        }
       };
 
       console.log('📤 Payload being sent:', payload);
@@ -440,15 +458,25 @@ const DaycareDashboard = () => {
                 <h4 className="font-medium text-gray-900 mb-3">Parent {index + 1}</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
                     <input
                       type="text"
-                      value={parent.name}
-                      onChange={(e) => updateParent(parent.id, 'name', e.target.value)}
+                      value={parent.firstName}
+                      onChange={(e) => updateParent(parent.id, 'firstName', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
-                      placeholder="Parent/Guardian name"
+                      placeholder="e.g. Jane"
                     />
                   </div>
+                  <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                     <input
+                       type="text"
+                       value={parent.lastName}
+                       onChange={(e) => updateParent(parent.id, 'lastName', e.target.value)}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                       placeholder="e.g. Doe"
+                     />
+                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                     <input
@@ -1214,6 +1242,8 @@ const DaycareDashboard = () => {
         return <CreatePaymentForm />;
       case 'mark-attendance':
         return <MarkAttendanceForm />;
+      case 'manage-age-groups':
+        return <ManageAgeGroupsForm />;
       default:
         return null;
     }
@@ -1233,13 +1263,20 @@ const DaycareDashboard = () => {
         return t('dashboard.quickActions.createPayment');
       case 'mark-attendance':
         return t('dashboard.quickActions.markAttendance');
+      case 'manage-age-groups':
+        return t('dashboard.quickActions.manageAgeGroups');
       default:
         return '';
     }
   };
 
   if (currentView === 'children') {
-    return <ChildrenManagement onBack={() => setCurrentView('dashboard')} />;
+       return (
+         <ChildrenManagement
+           filter={childFilter}
+           onBack={() => setCurrentView('dashboard')}
+         />
+       );
   }
 
   if (loading) {
@@ -1297,6 +1334,11 @@ const DaycareDashboard = () => {
             value={dashboardData.enrolled_children}
             icon={<span className="text-blue-600">😊</span>}
             color="bg-blue-50"
+            loading={statsLoading}
+            onClick={() => {
+              setChildFilter('enrolled');
+              setCurrentView('children');
+            }}
           />
           <StatCard
             title={t('dashboard.stats.activeStaff')}
@@ -1326,7 +1368,12 @@ const DaycareDashboard = () => {
             title={t('dashboard.stats.waitlisted')}
             value={dashboardData.waitlisted}
             icon={<span className="text-yellow-600">⏳</span>}
-            color="bg-yellow-50"
+            color="bg-blue-50"
+            loading={statsLoading}
+            onClick={() => {
+              setChildFilter('waitlist');
+              setCurrentView('children');
+            }}
           />
         </div>
 
@@ -1369,6 +1416,12 @@ const DaycareDashboard = () => {
               icon="✅"
               color="bg-teal-500"
               onClick={() => handleQuickAction('mark-attendance')}
+            />
+            <QuickActionButton
+              title="Manage Age Groups"
+              icon="📊"
+              color="bg-indigo-500"
+              onClick={() => handleQuickAction('manage-age-groups')}
             />
           </div>
         </div>
