@@ -40,9 +40,11 @@ export const API_ENDPOINTS = {
   PUBLIC_INVITATION: `${API_BASE_URL}/api/public/invitation`,
 
   // GET Children Stats API
-  DAYCARE_CHILDREN: '/api/daycare/children',
+  // DAYCARE_CHILDREN: '/api/daycare/children',
   DAYCARE_STATS:    '/api/daycare/children/stats',
   AGE_GROUPS: '/api/daycare/age-groups',
+  ALLERGIES: "/api/allergies",
+
 };
 
 // HTTP client configuration

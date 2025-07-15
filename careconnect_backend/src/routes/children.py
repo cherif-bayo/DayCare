@@ -14,6 +14,8 @@ from sqlalchemy.orm import joinedload
 from src.models.age_group import AgeGroup, AgeGroupHelper
 from src.models.emergency_contact import EmergencyContact
 from src.models.access_permission import AccessPermission
+from src.models.allergy import Allergy, ChildAllergy
+
 
 
 children_bp = Blueprint('children', __name__)
@@ -201,6 +203,21 @@ def create_child():
     if child.age_group_id is None:
         child.calculate_and_assign_age_group()
 
+    # CREATE  ------------------------------
+    links = data.get("allergy_links") or [
+        {"id": aid, "severity": None}
+        for aid in data.get("allergy_ids", [])
+    ]
+    for link in links:
+        db.session.add(
+            ChildAllergy(
+                daycare_id = daycare_id,
+                child_id   = child.id,
+                allergy_id = link["id"],
+                severity   = link.get("severity"),
+            )
+        )
+
     # 5) Link parents with all required fields
     for rec in parent_records:
         rel = ParentChildRelationship(
@@ -264,6 +281,31 @@ def update_child(child_id):
                     can_pickup    = ap.get("can_pickup", False),
                 )
             )
+    if "allergies" in data and "allergy_ids" not in data:
+        name_list = [s.strip() for s in data["allergies"].split(",") if s.strip()]
+        ids = [
+             a.id
+             for a in Allergy.query.filter(Allergy.name.in_(name_list)).all()
+        ]
+        data["allergy_ids"] = ids
+    # UPDATE  ------------------------------
+    if "allergy_links" in data or "allergy_ids" in data:
+        ChildAllergy.query.filter_by(child_id=c.id).delete()
+
+        links = data.get("allergy_links") or [
+            {"id": aid, "severity": None}
+            for aid in data.get("allergy_ids", [])
+        ]
+        for link in links:
+            db.session.add(
+                ChildAllergy(
+                    daycare_id = daycare_id,
+                    child_id   = c.id,
+                    allergy_id = link["id"],
+                    severity   = link.get("severity"),
+                )
+        )
+
 
     # # Age group is a simple column; keep what you already had:
     # if "age_group_id" in data:

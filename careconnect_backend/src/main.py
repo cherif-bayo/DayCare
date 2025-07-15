@@ -24,6 +24,7 @@ from src.models.payment import PaymentPlan, ChildPaymentAssignment, Invoice, Inv
 from src.models.activity import Activity, ChildActivityParticipation, Message, AuditLog, SystemSetting
 from src.routes.children import children_bp
 from src.models.age_group import AgeGroup, AgeGroupHelper
+from src.routes import allergies
 
 
 # Import routes
@@ -34,6 +35,7 @@ from src.routes.daycare import daycare_bp
 from src.routes.parent import parent_bp
 from src.routes.public import public_bp
 from src.routes.age_groups import age_groups_bp
+from src.routes.allergies import allergies_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
@@ -74,6 +76,7 @@ app.register_blueprint(public_bp, url_prefix='/api/public')
 app.register_blueprint(children_bp, url_prefix='/api/daycare/children')
 app.register_blueprint(daycare_bp, url_prefix='/api/daycare')
 app.register_blueprint(age_groups_bp, url_prefix="/api/daycare/age-groups")
+app.register_blueprint(allergies_bp)
 
 # Create database tables
 with app.app_context():

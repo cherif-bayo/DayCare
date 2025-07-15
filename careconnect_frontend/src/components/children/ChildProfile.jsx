@@ -42,11 +42,13 @@ const ChildProfile = ({ child: initialChild, onBack }) => {
   const medRaw = child.medical_info || {};
   const arr = (v) => (Array.isArray(v) ? v : []);     
   const medicalInfo = {
-    allergies: arr(medRaw.allergies).length
-      ? medRaw.allergies
-      : child.allergies
-        ? [{ name: child.allergies, severity: 'mild', description: '' }]
-        : [],
+    allergies: Array.isArray(child.child_allergies)
+       ? child.child_allergies
+       : arr(medRaw.allergies).length
+         ? medRaw.allergies
+         : child.allergies_csv   // legacy fallback, can drop later
+         ? [{ name: child.allergies_csv, severity: 'mild', description: '' }]
+         : [],
     medications: arr(medRaw.medications).length
       ? medRaw.medications
       : child.emergency_medications
@@ -315,22 +317,44 @@ const ChildProfile = ({ child: initialChild, onBack }) => {
               <div className="bg-white rounded-lg p-6 shadow-sm border">
                 <div className="flex items-center space-x-2 mb-4">
                   <span className="text-red-600">♥️</span>
-                  <h3 className="text-lg font-bold text-gray-900">{t('allergies')}</h3>
+                  <h3 className="text-lg font-bold text-gray-900">{t("allergies")}</h3>
                 </div>
-                {medicalInfo.allergies.length > 0 ? (
-                  medicalInfo.allergies.map((a, i) => (
-                    <div key={i} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-bold text-gray-900">{a.name}</p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(a.severity)}`}>
-                          {a.severity}
-                        </span>
+
+                {medicalInfo.allergies.length ? (
+                  medicalInfo.allergies.map((a, i) => {
+                    // ① name can come in two shapes – handle both
+                    const name = a?.allergy?.name ?? a?.name ?? a;   // fallback for legacy string
+
+                    // ② severity only exists on the new object shape
+                    const sev  = a?.severity;
+                    return (
+                      <div
+                        key={a?.id ?? `legacy-${i}`}          // unique key either way
+                        className="p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-bold">{name}</p>
+
+                          {sev && (
+                            <span
+                              className={
+                                `px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(
+                                  sev
+                                )}`
+                              }
+                            >
+                              {sev}
+                            </span>
+                          )}
+                        </div>
+                        {a?.reaction && (
+                          <p className="text-xs text-gray-500">{a.reaction}</p>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-600">{a.description}</p>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <p className="text-gray-500">{t('noAllergies')}</p>
+                  <p className="text-gray-500">{t("noAllergies")}</p>
                 )}
               </div>
 

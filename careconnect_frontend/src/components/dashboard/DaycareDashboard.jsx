@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { useDaycareStats } from '../../hooks/useDaycareStats';
 import ManageAgeGroupsForm from "../age-groups/ManageAgeGroupsForm";
 import { serializeAccess, deserializeAccess } from "@/lib/helpers";
+import { fetchAllergies } from "@/lib/allergies";
 
 const DaycareDashboard = () => {
   const { user, logout, accessToken } = useAuth();
@@ -158,7 +159,14 @@ const DaycareDashboard = () => {
     const [selectedMedications, setSelectedMedications] = useState([]);
     const [selectedConditions, setSelectedConditions] = useState([]);
 
-    const allergyOptions = ['Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Shellfish', 'Soy'];
+    // const allergyOptions = ['Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Shellfish', 'Soy'];
+    const [allergyOptions, setAllergyOptions] = useState([]);
+    const [selectedAllergyIds, setSelectedIds] = useState([]);
+
+    useEffect(() => {
+      fetchAllergies(accessToken).then(setAllergyOptions);
+    }, [accessToken]);
+    
     const medications = ['Ventolin (Salbutamol)', 'EpiPen Jr', 'Benadryl', 'Tylenol', 'Ritalin', 'Flovent'];
     const conditions = ['Asthma', 'Type 1 Diabetes', 'ADHD', 'Epilepsy', 'Eczema', 'Cerebral Palsy'];
 
@@ -263,7 +271,7 @@ const DaycareDashboard = () => {
           date_of_birth: dob,
           gender: gender || null,
           medical_conditions: medicalConditions || null,
-          allergies: allergies || null,
+          allergy_ids: selectedAllergyIds,
           dietary_restrictions: dietaryRestrictions || null,
           emergency_medications: emergencyMedications || null,
           photo_url: photoUrl || null,

@@ -6,6 +6,7 @@ import json
 from src.models.user import Parent, DaycareStaff
 from src.models.emergency_contact import EmergencyContact
 from src.models.access_permission import AccessPermission 
+from src.models.allergy import ChildAllergy 
 
 
 # ---------- association table  (MUST be above class Child) ----------
@@ -24,7 +25,7 @@ class Child(db.Model):
     date_of_birth = db.Column(db.Date, nullable=False)
     gender = db.Column(db.Enum('male', 'female', 'other', 'prefer_not_to_say', name='genders'))
     medical_conditions = db.Column(db.Text)
-    allergies = db.Column(db.Text)
+    allergies_csv = db.Column(db.Text)
     dietary_restrictions = db.Column(db.Text)
     emergency_medications = db.Column(db.Text)
     photo_url = db.Column(db.String(500))
@@ -73,6 +74,14 @@ class Child(db.Model):
         lazy      = "joined",
         cascade   = "all, delete-orphan",
         order_by  = "AccessPermission.id",
+    )
+
+    child_allergies = db.relationship(
+        "ChildAllergy",
+        backref  = "child",
+        lazy     = "joined",
+        cascade  = "all, delete-orphan",
+        order_by="ChildAllergy.id",
     )
     
     def get_pickup_authorization(self):
@@ -148,7 +157,7 @@ class Child(db.Model):
             'age': self.calculate_age(),
             'gender': self.gender,
             'medical_conditions': self.medical_conditions,
-            'allergies': self.allergies,
+            'child_allergies': [ca.to_dict() for ca in self.child_allergies],
             'dietary_restrictions': self.dietary_restrictions,
             'emergency_medications': self.emergency_medications,
             'photo_url': self.photo_url,
@@ -162,6 +171,8 @@ class Child(db.Model):
             'room_assignment': self.room_assignment,
             'age_in_months': self.get_age_in_months(),
             'age_display': self.get_age_display(),
+            'allergies': ([ca.to_dict() for ca in self.child_allergies]
+                         or ([{"name": self.allergies_csv}] if self.allergies_csv else [])),
             'pickup_authorization': self.get_pickup_authorization(),
             'emergency_contacts': [
                 {

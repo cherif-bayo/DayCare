@@ -42,3 +42,10 @@ export const toStrArr = (raw = []) => {
 export const invariant = (cond, msg = "Invariant failed") => {
   if (!cond) throw new Error(msg);
 };
+
+// careconnect_frontend/src/lib/helpers.js
+export const fetchAllergies = async token => {
+    const res = await apiCall(API_ENDPOINTS.ALLERGIES,
+      { headers: { Authorization: `Bearer ${token}` } });
+    return res.ok ? res.json() : [];
+  };

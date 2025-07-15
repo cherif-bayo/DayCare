@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { v4 as uuid } from "uuid";
 import { labelOfAgeGroup } from '../../lib/ageGroup';
 import {deserializeAccess, serializeAccess, toStrArr  } from "@/lib/helpers";
+import { fetchAllergies, createAllergy } from "@/lib/allergies";
 
 
 /* reusable checkbox list */
@@ -30,7 +31,7 @@ const CheckList = ({ options, selected, setSelected }) => {
 };
 
 const STATUS_OPTIONS = ["enrolled", "waitlist", "withdrawn", "graduated"];
-const ALLERGY_OPTS = ['Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Shellfish', 'Soy'];
+// const ALLERGY_OPTS = ['Peanuts', 'Tree Nuts', 'Milk', 'Eggs', 'Shellfish', 'Soy'];
 const MEDICATION_OPTS = ['Ventolin (Salbutamol)', 'EpiPen Jr', 'Benadryl', 'Tylenol', 'Ritalin', 'Flovent'];
 const CONDITION_OPTS = ['Asthma', 'Type 1 Diabetes', 'ADHD', 'Epilepsy', 'Eczema', 'Cerebral Palsy'];
 
@@ -68,9 +69,42 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
                                 : list.reduce((acc, cur) => acc.concat(splitter(cur)), []);
     };
 
-    const [selectedAllergies, setSelectedAllergies] = useState(
-        toStrArr(child.allergies)
-    );
+   
+    const [allergyOptions, setAllergyOptions] = useState([]);   // [{id,name}]
+ 
+     // which ones are ticked (store **ids**)
+    const [selectedAllergyIds, setSelectedIds] = useState(
+       Array.isArray(child.child_allergies)
+         ? child.child_allergies.map(ca => ca.allergy.id)
+         : []     // legacy record ⇒ none selected
+     );
+
+
+    /* ➊  map { allergyId : "mild" | "moderate" | "life_threatening" | "" } */
+    const initialSeverities = {};
+    if (Array.isArray(child.child_allergies)) {
+       child.child_allergies.forEach(ca => {
+         initialSeverities[ca.allergy.id] = ca.severity || "";
+       });
+    }
+    const [allergySeverities, setAllergySeverities] = useState(initialSeverities);
+     
+     // quick-add textbox
+    const [newAllergy, setNewAllergy] = useState("");
+    const addAllergy = async () => {
+       const name = newAllergy.trim();
+       if (!name) return;
+       try {
+         const created = await createAllergy(accessToken, { name });
+         setAllergyOptions(opts => [...opts, created]);
+         setSelectedIds(ids => [...ids, created.id]);   // auto-select new one
+         setAllergySeverities(m => ({ ...m, [created.id]: "" }));
+         setNewAllergy("");
+       } catch (err) {
+         console.error(err);
+         alert("Could not create allergy");
+       }
+    };
     const [selectedMedications, setSelectedMedications] = useState(
         toStrArr(child.emergency_medications)
     );
@@ -120,6 +154,12 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
          
          const removeAccess = id => setAccessRows(rs => rs.filter(r => r.id !== id));
 
+    useEffect(() => {
+               if (!accessToken) return;
+               fetchAllergies(accessToken)
+                 .then(list => setAllergyOptions(Array.isArray(list) ? list : []))
+                 .catch(console.error);
+    }, [accessToken]);
     /*  keep form in sync when parent pushes a new child prop */
 
     useEffect(() => {
@@ -130,7 +170,11 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
           setDob(child.date_of_birth);
           setAge(child?.age_group?.id ? String(child.age_group.id) : "");
           setStatus(child.status);
-          setSelectedAllergies(toStrArr(child.allergies));
+          setSelectedIds(
+                 Array.isArray(child.child_allergies)
+                   ? child.child_allergies.map(ca => ca.allergy.id)
+                   : []
+               );
           setSelectedMedications(toStrArr(child.emergency_medications));
           setSelectedConditions(toStrArr(child.medical_conditions));
           setContacts(normaliseContacts(child.emergency_contacts));
@@ -172,11 +216,8 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
     }, [accessToken, child.age_group, ageGroup]);
 
     useEffect(() => {
-        console.log("→ Allergies changed:", selectedAllergies);
-    }, [selectedAllergies]);
-
-    
-  
+        console.log("→ Allergies changed:", selectedAllergyIds);
+    }, [selectedAllergyIds]);
 
     const toggleStaff = (id) =>
         setStaffIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
@@ -193,7 +234,7 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
                 .map(({ id, ...rest }) => rest);
 
                 console.log("SUBMIT selections:", {
-                    allergies: selectedAllergies,
+                    allergy_ids: selectedAllergyIds,
                     medications: selectedMedications,
                     conditions: selectedConditions,
                 });
@@ -206,7 +247,10 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
                 status,
                 emergency_contacts: trimmedContacts,
                 access_permissions : serializeAccess(accessRows),
-                allergies:   selectedAllergies.join(", "),
+                allergy_links: selectedAllergyIds.map(id => ({
+                         id,
+                         severity: allergySeverities[id] || null
+                       })),
                 emergency_medications: selectedMedications.join(", "),
                 medical_conditions:  selectedConditions.join(", "),
                 assigned_staff_ids: staffIds,
@@ -236,6 +280,21 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
             setSaving(false);
         }
     }
+
+    const toggleAllergy = (id) => {
+           setSelectedIds(ids =>
+             ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]
+           );
+         
+           setAllergySeverities(map => {
+             if (map[id]) {
+               /* it was selected → now un-selected, so drop severity */
+               const { [id]: _, ...rest } = map;
+               return rest;
+             }
+             return { ...map, [id]: "" };        // default empty severity
+           });
+         };
 
     /* ── RENDER ──────────────────────────────────────────────── */
     return (
@@ -354,13 +413,68 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
             <div className="grid md:grid-cols-3 gap-4">
                 {/* Allergies */}
                 <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-4">{t("allergies")}</h3>
-                    <CheckList
-                        options={ALLERGY_OPTS}
-                        selected={selectedAllergies}
-                        setSelected={setSelectedAllergies}
+                <h3 className="text-lg font-semibold mb-4">{t("allergies")}</h3>
+
+                {allergyOptions.length === 0 && (
+                    <p className="text-sm text-gray-500">{t("common.loading")}…</p>
+                )}
+
+                {allergyOptions.map((opt) => {
+                    const checked = selectedAllergyIds.includes(opt.id);
+                    const sev     = allergySeverities[opt.id] ?? "";   // "", "mild", "moderate", …
+
+                    return (
+                    <div key={opt.id} className="flex items-center space-x-2 mb-1">
+                        {/* checkbox */}
+                        <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAllergy(opt.id)}         
+                        className="w-4 h-4 text-teal-600 border-gray-300 rounded"
+                        />
+                        <span className="text-sm">{opt.name}</span>
+
+                        {/* severity chooser appears only when the allergy is ticked */}
+                        {checked && (
+                        <select
+                            value={sev}
+                            onChange={(e) =>
+                            setAllergySeverities((m) => ({
+                                ...m,
+                                [opt.id]: e.target.value,
+                            }))
+                            }
+                            className="ml-2 text-xs border rounded px-1 py-0.5"
+                        >
+                            <option value="">severity…</option>
+                            <option value="mild">mild</option>
+                            <option value="moderate">moderate</option>
+                            <option value="life_threatening">life-threatening</option>
+                        </select>
+                        )}
+                    </div>
+                    );
+                })}
+
+                {/* quick-add allergy */}
+                <div className="mt-3 flex">
+                    <input
+                    type="text"
+                    value={newAllergy}
+                    onChange={(e) => setNewAllergy(e.target.value)}
+                    placeholder={t("addNew")}
+                    className="flex-1 px-2 py-1 border rounded-l"
                     />
+                    <button
+                    type="button"
+                    onClick={addAllergy}
+                    className="px-3 py-1 bg-teal-600 text-white rounded-r"
+                    >
+                    +
+                    </button>
                 </div>
+                </div>
+
 
                 {/* Emergency Medications */}
                 <div className="bg-gray-50 p-4 rounded-lg">
