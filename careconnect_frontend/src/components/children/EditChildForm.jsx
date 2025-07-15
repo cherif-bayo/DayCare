@@ -7,7 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { v4 as uuid } from "uuid";
 import { labelOfAgeGroup } from '../../lib/ageGroup';
-import {deserializeAccess, serializeAccess, toStrArr  } from "@/lib/helpers";
+import { deserializeAccess, serializeAccess, toStrArr } from "@/lib/helpers";
 import { fetchAllergies, createAllergy } from "@/lib/allergies";
 
 
@@ -50,60 +50,60 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
     const [ageGroup, setAge] = useState(
         child?.age_group?.id ? String(child.age_group.id) : ""
     );
-    
+
     /* ── age-group list that comes from the API ─────────────────── */
     const [ageGroups, setAgeGroups] = useState([]);
     const [status, setStatus] = useState(child.status);
-    const [saving,    setSaving] = useState(false);
+    const [saving, setSaving] = useState(false);
     /* ── medical check-box selections ─────────────────────────── */
     const toStrArr = (raw = []) => {
-            const list = Array.isArray(raw) ? raw : [raw];      // ensure array
-         
-            const splitter = (item) => {
-              const str = typeof item === "string" ? item : item?.name || "";
-              return str.split(/,\s*/).map((s) => s.trim()).filter(Boolean);
-            };
-         
-            // Use native flatMap if present, otherwise manual reduce
-            return list.flatMap ? list.flatMap(splitter)
-                                : list.reduce((acc, cur) => acc.concat(splitter(cur)), []);
+        const list = Array.isArray(raw) ? raw : [raw];      // ensure array
+
+        const splitter = (item) => {
+            const str = typeof item === "string" ? item : item?.name || "";
+            return str.split(/,\s*/).map((s) => s.trim()).filter(Boolean);
+        };
+
+        // Use native flatMap if present, otherwise manual reduce
+        return list.flatMap ? list.flatMap(splitter)
+            : list.reduce((acc, cur) => acc.concat(splitter(cur)), []);
     };
 
-   
+
     const [allergyOptions, setAllergyOptions] = useState([]);   // [{id,name}]
- 
-     // which ones are ticked (store **ids**)
+
+    // which ones are ticked (store **ids**)
     const [selectedAllergyIds, setSelectedIds] = useState(
-       Array.isArray(child.child_allergies)
-         ? child.child_allergies.map(ca => ca.allergy.id)
-         : []     // legacy record ⇒ none selected
-     );
+        Array.isArray(child.child_allergies)
+            ? child.child_allergies.map(ca => ca.allergy.id)
+            : []     // legacy record ⇒ none selected
+    );
 
 
     /* ➊  map { allergyId : "mild" | "moderate" | "life_threatening" | "" } */
     const initialSeverities = {};
     if (Array.isArray(child.child_allergies)) {
-       child.child_allergies.forEach(ca => {
-         initialSeverities[ca.allergy.id] = ca.severity || "";
-       });
+        child.child_allergies.forEach(ca => {
+            initialSeverities[ca.allergy.id] = ca.severity || "";
+        });
     }
     const [allergySeverities, setAllergySeverities] = useState(initialSeverities);
-     
-     // quick-add textbox
+
+    // quick-add textbox
     const [newAllergy, setNewAllergy] = useState("");
     const addAllergy = async () => {
-       const name = newAllergy.trim();
-       if (!name) return;
-       try {
-         const created = await createAllergy(accessToken, { name });
-         setAllergyOptions(opts => [...opts, created]);
-         setSelectedIds(ids => [...ids, created.id]);   // auto-select new one
-         setAllergySeverities(m => ({ ...m, [created.id]: "" }));
-         setNewAllergy("");
-       } catch (err) {
-         console.error(err);
-         alert("Could not create allergy");
-       }
+        const name = newAllergy.trim();
+        if (!name) return;
+        try {
+            const created = await createAllergy(accessToken, { name });
+            setAllergyOptions(opts => [...opts, created]);
+            setSelectedIds(ids => [...ids, created.id]);   // auto-select new one
+            setAllergySeverities(m => ({ ...m, [created.id]: "" }));
+            setNewAllergy("");
+        } catch (err) {
+            console.error(err);
+            alert("Could not create allergy");
+        }
     };
     const [selectedMedications, setSelectedMedications] = useState(
         toStrArr(child.emergency_medications)
@@ -122,17 +122,17 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
     );
     const addContact = () => setContacts((c) => [...c, newContact()]);
     const updateContact = (id, field, value) =>
-    setContacts((cs) => {
-             const idx = cs.findIndex((c) => c.id === id);
-             if (idx === -1) return cs;              
-         
-             const row   = cs[idx];
-             if (row[field] === value) return cs;       
-         
-             const clone = [...cs];                     
-             clone[idx]  = { ...row, [field]: value };  
-             return clone;                              
-           });
+        setContacts((cs) => {
+            const idx = cs.findIndex((c) => c.id === id);
+            if (idx === -1) return cs;
+
+            const row = cs[idx];
+            if (row[field] === value) return cs;
+
+            const clone = [...cs];
+            clone[idx] = { ...row, [field]: value };
+            return clone;
+        });
 
     const removeContact = (id) => setContacts((c) => c.filter(o => o.id !== id));
 
@@ -143,56 +143,56 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
 
     /*  Access-Permission rows  */
     const [accessRows, setAccessRows] = useState(
-           deserializeAccess(child.access_permissions)
-         );
-         
-         const addAccessRow = () =>
-           setAccessRows(r => [...r, deserializeAccess([{ /* blank */ }])[0]]);
-         
-         const updateAccess = (id, field, value) =>
-           setAccessRows(rs => rs.map(r => (r.id === id ? { ...r, [field]: value } : r)));
-         
-         const removeAccess = id => setAccessRows(rs => rs.filter(r => r.id !== id));
+        deserializeAccess(child.access_permissions)
+    );
+
+    const addAccessRow = () =>
+        setAccessRows(r => [...r, deserializeAccess([{ /* blank */ }])[0]]);
+
+    const updateAccess = (id, field, value) =>
+        setAccessRows(rs => rs.map(r => (r.id === id ? { ...r, [field]: value } : r)));
+
+    const removeAccess = id => setAccessRows(rs => rs.filter(r => r.id !== id));
 
     useEffect(() => {
-               if (!accessToken) return;
-               fetchAllergies(accessToken)
-                 .then(list => setAllergyOptions(Array.isArray(list) ? list : []))
-                 .catch(console.error);
+        if (!accessToken) return;
+        fetchAllergies(accessToken)
+            .then(list => setAllergyOptions(Array.isArray(list) ? list : []))
+            .catch(console.error);
     }, [accessToken]);
     /*  keep form in sync when parent pushes a new child prop */
 
     useEffect(() => {
-        
+
         if (!hasInitialized.current) {
-          setFirst(child.first_name);
-          setLast(child.last_name);
-          setDob(child.date_of_birth);
-          setAge(child?.age_group?.id ? String(child.age_group.id) : "");
-          setStatus(child.status);
-          setSelectedIds(
-                 Array.isArray(child.child_allergies)
-                   ? child.child_allergies.map(ca => ca.allergy.id)
-                   : []
-               );
-          setSelectedMedications(toStrArr(child.emergency_medications));
-          setSelectedConditions(toStrArr(child.medical_conditions));
-          setContacts(normaliseContacts(child.emergency_contacts));
-          setStaffIds(child.assigned_staff_ids || []);
-          hasInitialized.current = true;
+            setFirst(child.first_name);
+            setLast(child.last_name);
+            setDob(child.date_of_birth);
+            setAge(child?.age_group?.id ? String(child.age_group.id) : "");
+            setStatus(child.status);
+            setSelectedIds(
+                Array.isArray(child.child_allergies)
+                    ? child.child_allergies.map(ca => ca.allergy.id)
+                    : []
+            );
+            setSelectedMedications(toStrArr(child.emergency_medications));
+            setSelectedConditions(toStrArr(child.medical_conditions));
+            setContacts(normaliseContacts(child.emergency_contacts));
+            setStaffIds(child.assigned_staff_ids || []);
+            hasInitialized.current = true;
         }
-      }, [child]);
-      
-  
+    }, [child]);
+
+
 
     useEffect(() => {
         apiCall(API_ENDPOINTS.DAYCARE_STAFF, {
             headers: { Authorization: `Bearer ${accessToken}` },
-            cache:   "no-store",
+            cache: "no-store",
         })
             .then((r) => (r.status >= 200 && r.status < 300)    // only 2xx
-              ? safeJson(r)                                     // parse body
-              : []                                              // 304 => []
+                ? safeJson(r)                                     // parse body
+                : []                                              // 304 => []
             )
             .then((list) => setStaffChoices(Array.isArray(list) ? list : []))
             .catch(console.error);
@@ -201,18 +201,18 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
     // fetch active age groups (standard + custom) for this daycare
     useEffect(() => {
         apiCall(API_ENDPOINTS.AGE_GROUPS, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: "no-store",
+            headers: { Authorization: `Bearer ${accessToken}` },
+            cache: "no-store",
         })
-        .then(safeJson)                    // helper you already import
-        .then(list => {
-            setAgeGroups(Array.isArray(list) ? list : []);
-            // if the child already has a group but <select> didn't pick it, fix that:
-            if (list.length && !ageGroup && child.age_group?.id) {
-            setAge(String(child.age_group.id));
-            }
-        })
-        .catch(console.error);
+            .then(safeJson)                    // helper you already import
+            .then(list => {
+                setAgeGroups(Array.isArray(list) ? list : []);
+                // if the child already has a group but <select> didn't pick it, fix that:
+                if (list.length && !ageGroup && child.age_group?.id) {
+                    setAge(String(child.age_group.id));
+                }
+            })
+            .catch(console.error);
     }, [accessToken, child.age_group, ageGroup]);
 
     useEffect(() => {
@@ -233,26 +233,26 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
                 .filter(c => c.name || c.phone || c.relation)
                 .map(({ id, ...rest }) => rest);
 
-                console.log("SUBMIT selections:", {
-                    allergy_ids: selectedAllergyIds,
-                    medications: selectedMedications,
-                    conditions: selectedConditions,
-                });
+            console.log("SUBMIT selections:", {
+                allergy_ids: selectedAllergyIds,
+                medications: selectedMedications,
+                conditions: selectedConditions,
+            });
             /* 2️⃣  build the payload using those helpers */
             const payload = {
                 first_name: firstName,
-                last_name:  lastName,
+                last_name: lastName,
                 date_of_birth: dob,
                 age_group_id: finalAgeGroup,
                 status,
                 emergency_contacts: trimmedContacts,
-                access_permissions : serializeAccess(accessRows),
+                access_permissions: serializeAccess(accessRows),
                 allergy_links: selectedAllergyIds.map(id => ({
-                         id,
-                         severity: allergySeverities[id] || null
-                       })),
+                    id,
+                    severity: allergySeverities[id] || null
+                })),
                 emergency_medications: selectedMedications.join(", "),
-                medical_conditions:  selectedConditions.join(", "),
+                medical_conditions: selectedConditions.join(", "),
                 assigned_staff_ids: staffIds,
             };
 
@@ -282,19 +282,19 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
     }
 
     const toggleAllergy = (id) => {
-           setSelectedIds(ids =>
-             ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]
-           );
-         
-           setAllergySeverities(map => {
-             if (map[id]) {
-               /* it was selected → now un-selected, so drop severity */
-               const { [id]: _, ...rest } = map;
-               return rest;
-             }
-             return { ...map, [id]: "" };        // default empty severity
-           });
-         };
+        setSelectedIds(ids =>
+            ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]
+        );
+
+        setAllergySeverities(map => {
+            if (map[id]) {
+                /* it was selected → now un-selected, so drop severity */
+                const { [id]: _, ...rest } = map;
+                return rest;
+            }
+            return { ...map, [id]: "" };        // default empty severity
+        });
+    };
 
     /* ── RENDER ──────────────────────────────────────────────── */
     return (
@@ -311,12 +311,12 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
                         value={ageGroup}
                         onChange={e => setAge(e.target.value)}
                         className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-teal-500"
-                        >
+                    >
                         <option value="" disabled>{t("common.selectOne")}</option>
 
                         {ageGroups.map(g => (
                             <option key={g.id} value={String(g.id)}>
-                            {g.name}
+                                {g.name}
                             </option>
                         ))}
                     </select>
@@ -354,42 +354,42 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
 
             {/* ───── Access / Pick-up Permission ───── */}
             <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Access Permissions</h3>
-                <button type="button"
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Access Permissions</h3>
+                    <button type="button"
                         onClick={addAccessRow}
                         className="text-teal-600">＋</button>
-            </div>
+                </div>
 
-            {accessRows.map((ap, i) => (
-                <div key={ap.id} className="mb-4 p-4 bg-white rounded-lg border">
-                <h4 className="font-medium mb-3">Person {i + 1}</h4>
-                <div className="grid md:grid-cols-4 gap-4">
-                    <Input label="Name"
-                        value={ap.name}
-                        onChange={e => updateAccess(ap.id,"name",e.target.value)} />
-                    <Input label="Phone"
-                        value={ap.phone}
-                        onChange={e => updateAccess(ap.id,"phone",e.target.value)} />
-                    <Input label="Relation"
-                        value={ap.relation}
-                        onChange={e => updateAccess(ap.id,"relation",e.target.value)} />
-                    <label className="flex items-center space-x-2">
-                    <input type="checkbox"
-                            checked={ap.is_authorized}
-                            onChange={e =>
-                            updateAccess(ap.id,"is_authorized",e.target.checked)}
-                            className="w-4 h-4 text-teal-600 border-gray-300 rounded"/>
-                    <span>Can Pick Up</span>
-                    </label>
-                </div>
-                {accessRows.length > 1 && (
-                    <button type="button"
-                            onClick={() => removeAccess(ap.id)}
-                            className="text-red-500 text-sm mt-2">Remove</button>
-                )}
-                </div>
-            ))}
+                {accessRows.map((ap, i) => (
+                    <div key={ap.id} className="mb-4 p-4 bg-white rounded-lg border">
+                        <h4 className="font-medium mb-3">Person {i + 1}</h4>
+                        <div className="grid md:grid-cols-4 gap-4">
+                            <Input label="Name"
+                                value={ap.name}
+                                onChange={e => updateAccess(ap.id, "name", e.target.value)} />
+                            <Input label="Phone"
+                                value={ap.phone}
+                                onChange={e => updateAccess(ap.id, "phone", e.target.value)} />
+                            <Input label="Relation"
+                                value={ap.relation}
+                                onChange={e => updateAccess(ap.id, "relation", e.target.value)} />
+                            <label className="flex items-center space-x-2">
+                                <input type="checkbox"
+                                    checked={ap.is_authorized}
+                                    onChange={e =>
+                                        updateAccess(ap.id, "is_authorized", e.target.checked)}
+                                    className="w-4 h-4 text-teal-600 border-gray-300 rounded" />
+                                <span>Can Pick Up</span>
+                            </label>
+                        </div>
+                        {accessRows.length > 1 && (
+                            <button type="button"
+                                onClick={() => removeAccess(ap.id)}
+                                className="text-red-500 text-sm mt-2">Remove</button>
+                        )}
+                    </div>
+                ))}
             </div>
 
 
@@ -413,66 +413,66 @@ export default function EditChildForm({ child, onCancel, onSaved }) {
             <div className="grid md:grid-cols-3 gap-4">
                 {/* Allergies */}
                 <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-lg font-semibold mb-4">{t("allergies")}</h3>
+                    <h3 className="text-lg font-semibold mb-4">{t("allergies")}</h3>
 
-                {allergyOptions.length === 0 && (
-                    <p className="text-sm text-gray-500">{t("common.loading")}…</p>
-                )}
+                    {allergyOptions.length === 0 && (
+                        <p className="text-sm text-gray-500">{t("common.loading")}…</p>
+                    )}
 
-                {allergyOptions.map((opt) => {
-                    const checked = selectedAllergyIds.includes(opt.id);
-                    const sev     = allergySeverities[opt.id] ?? "";   // "", "mild", "moderate", …
+                    {allergyOptions.map((opt) => {
+                        const checked = selectedAllergyIds.includes(opt.id);
+                        const sev = allergySeverities[opt.id] ?? "";   // "", "mild", "moderate", …
 
-                    return (
-                    <div key={opt.id} className="flex items-center space-x-2 mb-1">
-                        {/* checkbox */}
+                        return (
+                            <div key={opt.id} className="flex items-center space-x-2 mb-1">
+                                {/* checkbox */}
+                                <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleAllergy(opt.id)}
+                                    className="w-4 h-4 text-teal-600 border-gray-300 rounded"
+                                />
+                                <span className="text-sm">{opt.name}</span>
+
+                                {/* severity chooser appears only when the allergy is ticked */}
+                                {checked && (
+                                    <select
+                                        value={sev}
+                                        onChange={(e) =>
+                                            setAllergySeverities((m) => ({
+                                                ...m,
+                                                [opt.id]: e.target.value,
+                                            }))
+                                        }
+                                        className="ml-2 text-xs border rounded px-1 py-0.5"
+                                    >
+                                        <option value="">severity…</option>
+                                        <option value="mild">mild</option>
+                                        <option value="moderate">moderate</option>
+                                        <option value="life_threatening">life-threatening</option>
+                                    </select>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {/* quick-add allergy */}
+                    <div className="mt-3 flex">
                         <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleAllergy(opt.id)}         
-                        className="w-4 h-4 text-teal-600 border-gray-300 rounded"
+                            type="text"
+                            value={newAllergy}
+                            onChange={(e) => setNewAllergy(e.target.value)}
+                            placeholder={t("addNew")}
+                            className="flex-1 px-2 py-1 border rounded-l"
                         />
-                        <span className="text-sm">{opt.name}</span>
-
-                        {/* severity chooser appears only when the allergy is ticked */}
-                        {checked && (
-                        <select
-                            value={sev}
-                            onChange={(e) =>
-                            setAllergySeverities((m) => ({
-                                ...m,
-                                [opt.id]: e.target.value,
-                            }))
-                            }
-                            className="ml-2 text-xs border rounded px-1 py-0.5"
+                        <button
+                            type="button"
+                            onClick={addAllergy}
+                            className="px-3 py-1 bg-teal-600 text-white rounded-r"
                         >
-                            <option value="">severity…</option>
-                            <option value="mild">mild</option>
-                            <option value="moderate">moderate</option>
-                            <option value="life_threatening">life-threatening</option>
-                        </select>
-                        )}
+                            +
+                        </button>
                     </div>
-                    );
-                })}
-
-                {/* quick-add allergy */}
-                <div className="mt-3 flex">
-                    <input
-                    type="text"
-                    value={newAllergy}
-                    onChange={(e) => setNewAllergy(e.target.value)}
-                    placeholder={t("addNew")}
-                    className="flex-1 px-2 py-1 border rounded-l"
-                    />
-                    <button
-                    type="button"
-                    onClick={addAllergy}
-                    className="px-3 py-1 bg-teal-600 text-white rounded-r"
-                    >
-                    +
-                    </button>
-                </div>
                 </div>
 
 
