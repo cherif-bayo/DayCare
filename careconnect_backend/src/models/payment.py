@@ -3,6 +3,7 @@ from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy.orm import relationship
 from src.models.child import Child
+from sqlalchemy import Column
 
 class PaymentPlan(db.Model):
     __tablename__ = 'payment_plans'
