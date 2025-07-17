@@ -3,7 +3,7 @@ from datetime import datetime, date, timedelta
 from dateutil.relativedelta import relativedelta
 from src.models.user import db
 from enum import Enum
-from sqlalchemy import Numeric
+from sqlalchemy import Numeric, Column, String, Float, DateTime, Date, Boolean, Text, ForeignKey, Integer
 
 
 class SubscriptionPlanType(Enum):
@@ -17,6 +17,7 @@ class SubscriptionStatus(Enum):
     EXPIRED = 'expired'
     CANCELLED = 'cancelled'
     PENDING = 'pending'
+    TRIAL = 'trial'
 
 class SubscriptionPlan(db.Model):
     """Subscription plans available in the system"""
@@ -27,6 +28,8 @@ class SubscriptionPlan(db.Model):
     plan_type = db.Column(db.Enum(SubscriptionPlanType), nullable=False)
     price = db.Column(db.Numeric(10, 2), nullable=False, default=0.00)
     currency = db.Column(db.String(3), default='CAD')
+    billing_interval_days = Column(Integer, nullable=True)  # 30 for monthly, 365 for yearly, null for lifetime
+    trial_days            = db.Column(db.Integer, default=365)     # number of days for free trial
     duration_months = db.Column(db.Integer)  # NULL for lifetime
     description = db.Column(db.Text)
     features = db.Column(db.Text)  # JSON string of features
@@ -68,6 +71,7 @@ class DaycareSubscription(db.Model):
     
     # Payment tracking
     last_payment_date = db.Column(db.Date)
+    next_billing_date   = db.Column(db.Date, nullable=True)        # when the next invoice is due
     next_payment_date = db.Column(db.Date)
     auto_renew = db.Column(db.Boolean, default=True)
     
@@ -75,7 +79,7 @@ class DaycareSubscription(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     cancelled_at = db.Column(db.DateTime)
-    cancelled_reason = db.Column(db.String(500))
+    cancellation_reason = db.Column(db.Text, nullable=True)
     
     # Relationships
     daycare = db.relationship('Daycare', backref='subscriptions')
@@ -113,6 +117,12 @@ class DaycareSubscription(db.Model):
         delta = self.trial_end_date - date.today()
         return delta.days
     
+    def needs_renewal_reminder(self):
+        days_left = self.days_until_expiry()
+        if days_left is None:   # lifetime never needs it
+            return False
+        return days_left in (30, 7, 0)
+
     def calculate_end_date(self):
         """Calculate end date based on plan duration"""
         if self.plan.plan_type == SubscriptionPlanType.LIFETIME:
@@ -179,6 +189,9 @@ class SubscriptionNotification(db.Model):
     scheduled_date = db.Column(db.Date, nullable=False)
     sent_at = db.Column(db.DateTime)
     is_sent = db.Column(db.Boolean, default=False)
+    is_read       = db.Column(db.Boolean, default=False)     # track whether the user saw it
+    is_urgent     = db.Column(db.Boolean, default=False)     # flag high‑priority notices
+    scheduled_for = db.Column(db.DateTime, nullable=True)    # allow time‑of‑day scheduling
     
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -401,3 +414,105 @@ class SubscriptionHelper:
             DaycareSubscription.end_date <= cutoff_date,
             DaycareSubscription.end_date >= date.today()
         ).all()
+    
+    @staticmethod
+    def create_notification(subscription_id, notification_type, title, message,
+                            is_urgent=False, scheduled_for=None):
+        """Generic way to enqueue a notification."""
+        notif = SubscriptionNotification(
+            subscription_id=subscription_id,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            is_urgent=is_urgent,
+            scheduled_for=scheduled_for
+        )
+        db.session.add(notif)
+        db.session.commit()
+        return notif
+
+    @staticmethod
+    def check_and_create_reminders():
+        """Scan ACTIVE/TRIAL subs and fire off any 30‑/7‑/0‑day reminders."""
+        subs = DaycareSubscription.query.filter(
+            DaycareSubscription.status.in_([SubscriptionStatus.ACTIVE,
+                                            SubscriptionStatus.TRIAL])
+        ).all()
+
+        for sub in subs:
+            if not sub.needs_renewal_reminder():
+                continue
+
+            days_left = sub.days_until_expiry()
+            key = f'reminder_{days_left}_days'
+            # skip if already created
+            existing = SubscriptionNotification.query.filter_by(
+                subscription_id=sub.id,
+                notification_type=key
+            ).first()
+            if existing:
+                continue
+
+            # build title/message based on days_left
+            if days_left == 30:
+                title     = "Subscription Renewal Reminder"
+                message   = (
+                    f"Your {sub.plan.name} subscription will expire in 30 days "
+                    f"on {sub.end_date.strftime('%B %d, %Y')}. Renew now to continue service."
+                )
+                is_urgent = False
+            elif days_left == 7:
+                title     = "Subscription Expires Soon"
+                message   = (
+                    f"Your {sub.plan.name} subscription will expire in 7 days "
+                    f"on {sub.end_date.strftime('%B %d, %Y')}. Please renew to avoid interruption."
+                )
+                is_urgent = True
+            else:  # days_left == 0
+                title     = "Subscription Expired"
+                message   = (
+                    f"Your {sub.plan.name} subscription expired today. "
+                    "Renew now to restore access."
+                )
+                is_urgent = True
+
+            # create the notification
+            SubscriptionHelper.create_notification(
+                subscription_id=sub.id,
+                notification_type=key,
+                title=title,
+                message=message,
+                is_urgent=is_urgent,
+                scheduled_for=datetime.utcnow()
+            )
+
+        return True
+
+
+    @staticmethod
+    def get_subscription_for_daycare(daycare_id):
+        """Fetch the latest subscription record for a daycare."""
+        return DaycareSubscription.query.filter_by(
+            daycare_id=daycare_id
+        ).order_by(DaycareSubscription.created_at.desc()).first()
+
+    @staticmethod
+    def cancel_subscription(subscription_id, reason=None):
+        """Mark a sub as cancelled and notify the daycare."""
+        sub = DaycareSubscription.query.get(subscription_id)
+        if not sub:
+            return False
+        sub.status            = SubscriptionStatus.CANCELLED
+        sub.cancelled_at      = datetime.utcnow()
+        sub.cancellation_reason = reason
+        sub.auto_renew        = False
+        db.session.commit()
+        # enqueue a cancellation notice:
+        SubscriptionHelper.create_notification(
+            sub.id,
+            'cancelled',
+            'Subscription Cancelled',
+            f'Your subscription has been cancelled. You retain access until '
+            f'{sub.end_date.strftime("%B %d, %Y") if sub.end_date else "end of period"}.'
+        )
+        return True
