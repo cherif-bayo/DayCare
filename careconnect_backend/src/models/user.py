@@ -140,6 +140,15 @@ class Daycare(db.Model):
     activities = db.relationship('Activity', backref='daycare', cascade='all, delete-orphan')
     payment_plans = db.relationship('PaymentPlan', backref='daycare', cascade='all, delete-orphan')
     registration_requests = db.relationship('RegistrationRequest', backref='daycare', cascade='all, delete-orphan')
+
+    # Subscriptions for this daycare
+    subscriptions = db.relationship(
+        'DaycareSubscription',
+        backref='daycare',
+        cascade='all, delete-orphan',
+        lazy='dynamic'
+    )
+
     
     def get_program_types(self):
         """Get the list of program types offered by this daycare"""

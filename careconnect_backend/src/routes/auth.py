@@ -10,6 +10,7 @@ import json
 from flask_cors import cross_origin
 import traceback
 from sqlalchemy.exc import IntegrityError
+from src.models.subscription import SubscriptionPlan, SubscriptionHelper
 
 
 
@@ -224,6 +225,24 @@ def register():
                 permissions=json.dumps({})  # or whatever default perms you want
             )
             db.session.add(owner)
+            # —————— SUBSCRIPTION INTEGRATION ——————
+            # If the frontend sent a selected_plan, wire up a subscription now
+            selected_plan = data.get('selected_plan')
+            if selected_plan:
+                plan = SubscriptionPlan.query.get(selected_plan.get('id'))
+                if plan:
+                    subscription = SubscriptionHelper.create_subscription(
+                        daycare_id=dc.id,
+                        plan_id=plan.id,
+                        start_date=datetime.utcnow().date()
+                    )
+                    if subscription:
+                        print(f"✅ Subscription created for daycare {dc.id} with plan {plan.name}")
+                    else:
+                        print(f"⚠️ Failed to create subscription for daycare {dc.id}")
+                else:
+                    print(f"⚠️ Selected plan not found: {selected_plan.get('id')}")
+            # ————————————————————————————————
         db.session.commit()
 
         # generate tokens
