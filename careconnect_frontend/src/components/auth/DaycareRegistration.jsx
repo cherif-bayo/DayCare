@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+// src/components/auth/DaycareRegistration.jsx - SUBSCRIPTION INTEGRATED
+
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,14 +10,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'react-hot-toast';
-import { ArrowLeft, Building, Mail, Phone, MapPin, Users, Info } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Building, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Users, 
+  Info, 
+  Crown,
+  CheckCircle,
+  Heart,
+  Calendar,
+  Infinity,
+  DollarSign
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-
+import { useSubscription } from '../../contexts/SubscriptionContext';
 
 export const DaycareRegistration = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { register } = useAuth();
+  const { selectedPlan, subscribeToPlan, clearSelectedPlan } = useSubscription();
   
   const [formData, setFormData] = useState({
     // Personal Information
@@ -59,6 +76,7 @@ export const DaycareRegistration = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const [showSubscriptionConfirm, setShowSubscriptionConfirm] = useState(false);
 
   const provinces = [
     { code: 'AB', name: 'Alberta' },
@@ -124,6 +142,62 @@ export const DaycareRegistration = () => {
     }
   ];
 
+  // Get plan icon
+  const getPlanIcon = (planType) => {
+    switch (planType) {
+      case 'free':
+        return <Heart className="h-6 w-6" />;
+      case 'monthly':
+        return <Calendar className="h-6 w-6" />;
+      case 'yearly':
+        return <Crown className="h-6 w-6" />;
+      case 'lifetime':
+        return <Infinity className="h-6 w-6" />;
+      default:
+        return <Heart className="h-6 w-6" />;
+    }
+  };
+
+  // Get plan color
+  const getPlanColor = (planType) => {
+    switch (planType) {
+      case 'free':
+        return 'from-green-400 to-green-600';
+      case 'monthly':
+        return 'from-blue-400 to-blue-600';
+      case 'yearly':
+        return 'from-purple-400 to-purple-600';
+      case 'lifetime':
+        return 'from-amber-400 to-amber-600';
+      default:
+        return 'from-gray-400 to-gray-600';
+    }
+  };
+
+  // Format price display
+  const formatPrice = (plan) => {
+    if (!plan) return 'Free';
+    if (plan.price === 0) return 'Free';
+    return `$${plan.price.toLocaleString()}`;
+  };
+
+  // Format period display
+  const formatPeriod = (plan) => {
+    if (!plan) return 'for 1 year';
+    switch (plan.plan_type) {
+      case 'free':
+        return 'for 1 year';
+      case 'monthly':
+        return 'per month';
+      case 'yearly':
+        return 'per year';
+      case 'lifetime':
+        return 'one-time';
+      default:
+        return '';
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
@@ -156,42 +230,46 @@ export const DaycareRegistration = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // setError('');
-    // setSuccess('');
     toast.dismiss();
 
-    // Validation
-    // if (formData.password !== formData.confirmPassword) {
-    //   // setError('Passwords do not match');
-    //   toast.error('Passwords do not match');
-    //   setLoading(false);
-    //   return;
-    // }
-
-    // if (formData.password.length < 8) {
-    //   setError('Password must be at least 8 characters long');
-    //   setLoading(false);
-    //   return;
-    // }
-
-    // Check if at least one program type is selected
-    const selectedProgramTypes = Object.keys(formData.programTypes).filter(key => formData.programTypes[key]);
-    // if (selectedProgramTypes.length === 0) {
-    //   setError('Please select at least one program type');
-    //   setLoading(false);
-    //   return;
-    // }
-
-    // Check if at least one age group is selected
-    const selectedAgeGroups = Object.keys(formData.ageGroups).filter(key => formData.ageGroups[key]);
-    // if (selectedAgeGroups.length === 0) {
-    //   setError('Please select at least one age group');
-    //   setLoading(false);
-    //   return;
-    // }
-
+    // Client-side validation
+    const errs = {};
+    if (!formData.firstName.trim()) errs.firstName = t('errors.REQUIRED');
+    if (!formData.lastName.trim()) errs.lastName = t('errors.REQUIRED');
+    if (!formData.email.trim()) errs.email = t('errors.REQUIRED');
+    if (!formData.password) errs.password = t('errors.REQUIRED');
+    if (formData.password !== formData.confirmPassword)
+      errs.confirmPassword = t('errors.PASSWORD_MISMATCH');
+    if (!formData.daycareName.trim()) errs.daycareName = t('errors.REQUIRED');
+    if (!formData.licenseNumber.trim()) errs.licenseNumber = t('errors.REQUIRED');
+    if (!formData.address.trim()) errs.address = t('errors.REQUIRED');
+    if (!formData.city.trim()) errs.city = t('errors.REQUIRED');
+    if (!formData.province) errs.province = t('errors.REQUIRED');
+    if (!formData.postalCode.trim()) errs.postalCode = t('errors.REQUIRED');
+    if (!formData.capacity) errs.capacity = t('errors.REQUIRED');
     
+    // At least one program type
+    if (Object.values(formData.programTypes).every(v => !v))
+      errs.programTypes = t('errors.SELECT_PROGRAM_TYPE');
+    
+    // At least one age group
+    if (Object.values(formData.ageGroups).every(v => !v))
+      errs.ageGroups = t('errors.SELECT_AGE_GROUP');
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      toast.error(Object.values(errs)[0]);
+      setLoading(false);
+      return;
+    }
+
+    // Clear field errors
+    setFieldErrors({});
+
     // Prepare registration data
+    const selectedProgramTypes = Object.keys(formData.programTypes).filter(key => formData.programTypes[key]);
+    const selectedAgeGroups = Object.keys(formData.ageGroups).filter(key => formData.ageGroups[key]);
+
     const registrationData = {
       user_type: 'daycare',
       first_name: formData.firstName,
@@ -212,65 +290,56 @@ export const DaycareRegistration = () => {
         description: formData.description,
         program_types: selectedProgramTypes,
         age_groups: selectedAgeGroups
-      }
+      },
+      // Include selected plan information
+      selected_plan: selectedPlan
     };
 
-    // clear any previous field highlights
-    setFieldErrors({});
-    const result = await register(registrationData);
-    
-    if (result.success) {
-      // setSuccess('Registration successful! Please check your email for verification instructions.');
-      // setTimeout(() => {
-      //   navigate('/login');
-      // }, 3000);
-      toast.success('Registration successful! Redirecting to login…');
-      setTimeout(() => navigate('/login'), 2500);
-    } else {
-
-      // --- CLIENT‐SIDE REQUIRED FIELD CHECKS ---
-
-      const errs = {};
-      if (result.code === 'DUPLICATE_LICENSE_NUMBER') {
-          errs.licenseNumber = result.error;
+    try {
+      // Register the daycare
+      const result = await register(registrationData);
+      
+      if (result.success) {
+        // If a plan was selected and registration successful, create subscription
+        if (selectedPlan && result.daycare_id) {
+          const subscriptionResult = await subscribeToPlan(selectedPlan.id, result.daycare_id);
+          
+          if (subscriptionResult.success) {
+            toast.success('Registration successful! Your subscription has been activated.');
+            clearSelectedPlan(); // Clear the selected plan
+          } else {
+            toast.success('Registration successful! Please set up your subscription in the dashboard.');
+          }
+        } else {
+          toast.success('Registration successful! Please check your email for verification instructions.');
+        }
+        
+        setTimeout(() => {
+          navigate('/login');
+        }, 2500);
+      } else {
+        // Handle specific error codes
+        const newErrs = {};
+        if (result.code === 'DUPLICATE_LICENSE_NUMBER') {
+          newErrs.licenseNumber = result.error;
+        }
+        if (result.code === 'PASSWORD_TOO_WEAK') {
+          newErrs.password = result.error;
+        }
+        
+        setFieldErrors(newErrs);
+        toast.error(result.error, { duration: 4000 });
       }
-      if (result.code === 'PASSWORD_TOO_WEAK') {
-          errs.password = result.error;
-      }
-      if (!formData.firstName.trim())      errs.firstName      = t('errors.REQUIRED');
-      if (!formData.lastName.trim())       errs.lastName       = t('errors.REQUIRED');
-      if (!formData.email.trim())          errs.email          = t('errors.REQUIRED');
-      if (!formData.password)              errs.password       = t('errors.REQUIRED');
-      if (formData.password !== formData.confirmPassword)
-        errs.confirmPassword = t('errors.PASSWORD_MISMATCH');
-      if (!formData.daycareName.trim())    errs.daycareName    = t('errors.REQUIRED');
-      if (!formData.licenseNumber.trim())  errs.licenseNumber  = t('errors.REQUIRED');
-      if (!formData.address.trim())        errs.address        = t('errors.REQUIRED');
-      if (!formData.city.trim())           errs.city           = t('errors.REQUIRED');
-      if (!formData.province)              errs.province       = t('errors.REQUIRED');
-      if (!formData.postalCode.trim())     errs.postalCode     = t('errors.REQUIRED');
-      if (!formData.capacity)              errs.capacity       = t('errors.REQUIRED');
-      // at least one program type
-      if (Object.values(formData.programTypes).every(v => !v))
-      errs.programTypes = t('errors.SELECT_PROGRAM_TYPE');
-      // at least one age group
-      if (Object.values(formData.ageGroups).every(v => !v))
-        errs.ageGroups = t('errors.SELECT_AGE_GROUP');
-
-      // 3) if any inline errors, bail out
-      if (Object.keys(errs).length > 0) {
-        setFieldErrors(errs);
-        // show the first error as a toast
-        toast.error(Object.values(errs)[0]);
-        setLoading(false);
-        return;
-      }
-      setFieldErrors(errs);
-      // setError(result.error);
-      toast.error(result.error, { duration: 4000 });
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error('An unexpected error occurred. Please try again.');
     }
     
     setLoading(false);
+  };
+
+  const handleChangePlan = () => {
+    navigate('/#pricing-section');
   };
 
   return (
@@ -288,6 +357,41 @@ export const DaycareRegistration = () => {
           </Button>
         </div>
 
+        {/* Selected Plan Display */}
+        {selectedPlan && (
+          <Card className="mb-6 shadow-lg border-0 bg-white/90 backdrop-blur-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className={`w-12 h-12 bg-gradient-to-r ${getPlanColor(selectedPlan.plan_type)} rounded-xl flex items-center justify-center text-white`}>
+                    {getPlanIcon(selectedPlan.plan_type)}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Selected Plan: {selectedPlan.name}
+                    </h3>
+                    <p className="text-gray-600">
+                      {formatPrice(selectedPlan)} {formatPeriod(selectedPlan)}
+                    </p>
+                    {selectedPlan.plan_type === 'free' && (
+                      <p className="text-sm text-green-600 font-medium">
+                        Free for parents forever
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleChangePlan}
+                  className="text-teal-600 border-teal-600 hover:bg-teal-50"
+                >
+                  Change Plan
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
           <CardHeader className="text-center pb-6">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full gradient-bg mb-4">
@@ -299,6 +403,14 @@ export const DaycareRegistration = () => {
             <p className="text-gray-600 mt-2">
               Join CareConnect Canada as a daycare provider
             </p>
+            {selectedPlan && (
+              <div className="mt-4 inline-flex items-center space-x-2 bg-teal-100 text-teal-800 px-4 py-2 rounded-full">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {selectedPlan.name} plan selected
+                </span>
+              </div>
+            )}
           </CardHeader>
           
           <CardContent className="space-y-8">
@@ -539,7 +651,6 @@ export const DaycareRegistration = () => {
                     {fieldErrors.postalCode && (
                       <p className="text-sm text-red-600">{fieldErrors.postalCode}</p>
                     )}
-
                   </div>
                 </div>
 
@@ -630,16 +741,14 @@ export const DaycareRegistration = () => {
                           <p className="text-sm text-gray-600 mt-1">
                             {program.description}
                           </p>
-                          {fieldErrors.programTypes && (
-                            <p className="text-sm text-red-600 mb-2">
-                              {fieldErrors.programTypes}
-                            </p>
-                          )}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+                {fieldErrors.programTypes && (
+                  <p className="text-sm text-red-600">{fieldErrors.programTypes}</p>
+                )}
               </div>
 
               {/* Canadian Government Age Groups */}
@@ -671,17 +780,47 @@ export const DaycareRegistration = () => {
                           <p className="text-sm text-gray-600 mt-1">
                             {ageGroup.description}
                           </p>
-                          {fieldErrors.ageGroups && (
-                            <p className="text-sm text-red-600 mb-2">
-                              {fieldErrors.ageGroups}
-                            </p>
-                          )}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+                {fieldErrors.ageGroups && (
+                  <p className="text-sm text-red-600">{fieldErrors.ageGroups}</p>
+                )}
               </div>
+
+              {/* Subscription Summary */}
+              {selectedPlan && (
+                <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-6 border border-teal-200">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                    <Crown className="h-5 w-5 mr-2 text-teal-600" />
+                    Subscription Summary
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">Selected Plan:</span>
+                      <span className="font-semibold text-gray-900">{selectedPlan.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">Price:</span>
+                      <span className="font-semibold text-gray-900">
+                        {formatPrice(selectedPlan)} {formatPeriod(selectedPlan)}
+                      </span>
+                    </div>
+                    {selectedPlan.plan_type === 'free' && (
+                      <div className="bg-green-100 border border-green-200 rounded-lg p-3 mt-3">
+                        <p className="text-green-800 text-sm font-medium">
+                          🎉 You'll get 1 full year free to try CareConnect! After that, you can choose to continue with a paid plan or cancel anytime.
+                        </p>
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-600 mt-3">
+                      Your subscription will be automatically activated after successful registration.
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Submit Button */}
               <div className="pt-6">
@@ -690,8 +829,25 @@ export const DaycareRegistration = () => {
                   disabled={loading}
                   className="w-full gradient-bg hover:opacity-90 text-white py-3 text-lg font-semibold"
                 >
-                  {loading ? 'Creating Account...' : 'Create Daycare Account'}
+                  {loading ? 'Creating Account...' : 
+                   selectedPlan ? `Create Account & Start ${selectedPlan.name}` : 'Create Daycare Account'}
                 </Button>
+                
+                {!selectedPlan && (
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-gray-600 mb-2">
+                      Haven't selected a plan yet?
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleChangePlan}
+                      className="text-teal-600 border-teal-600 hover:bg-teal-50"
+                    >
+                      Choose Your Plan
+                    </Button>
+                  </div>
+                )}
               </div>
             </form>
           </CardContent>
@@ -700,4 +856,3 @@ export const DaycareRegistration = () => {
     </div>
   );
 };
-

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { 
   Heart, 
   Users, 
@@ -25,6 +26,7 @@ import logoHorizontal from '../assets/careconnect_logo_horizontal.png';
 export const LandingPage = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { selectPlan, availablePlans, fetchAvailablePlans } = useSubscription();
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -34,12 +36,23 @@ export const LandingPage = () => {
     setCurrentLanguage(newLang);
   };
 
+  // Updated handlers to go to pricing section first
   const handleGetStarted = () => {
-    navigate('/register');
+    scrollToSection('pricing-section');
+  };
+
+  const handleSignUp = () => {
+    scrollToSection('pricing-section');
   };
 
   const handleSignIn = () => {
     navigate('/login');
+  };
+
+  // Handle plan selection
+  const handlePlanSelection = (plan) => {
+    selectPlan(plan);
+    navigate('/register');
   };
 
   // Smooth scroll function
@@ -77,14 +90,19 @@ export const LandingPage = () => {
     };
   }, [isMobileMenuOpen]);
 
-  // Pricing plans data
-  const pricingPlans = [
+  // Load available plans on mount
+  useEffect(() => {
+    fetchAvailablePlans();
+  }, []);
+
+  // Fallback pricing data (shows immediately while API loads)
+  const fallbackPricingPlans = [
     {
       id: 'free',
       name: 'Free Trial',
       price: 'Free',
       period: 'for 1 year',
-      description: 'Perfect for getting started',
+      description: 'Perfect for getting started with CareConnect',
       icon: <Heart className="h-8 w-8" />,
       color: 'from-green-400 to-green-600',
       features: [
@@ -92,14 +110,34 @@ export const LandingPage = () => {
         'Child profiles and development tracking',
         'Parent communication portal',
         'Activity documentation',
-        'Basic reporting',
         'Billing and payment processing',
-        'Free support included',
-        'Available for daycares only',
-        'Parents always free'
+        'Incident reporting',
+        'Staff management',
+        'Canadian compliance ready',
+        'Bilingual support (EN/FR)',
+        'Free support included'
       ],
       highlight: false,
-      note: 'Free for parents forever'
+      note: 'Free for parents forever',
+      planData: {
+        id: 1,
+        name: 'Free Trial',
+        plan_type: 'free',
+        price: 0,
+        description: 'Perfect for getting started with CareConnect',
+        features: JSON.stringify([
+          'Complete daycare management system',
+          'Child profiles and development tracking',
+          'Parent communication portal',
+          'Activity documentation',
+          'Billing and payment processing',
+          'Incident reporting',
+          'Staff management',
+          'Canadian compliance ready',
+          'Bilingual support (EN/FR)',
+          'Free support included'
+        ])
+      }
     },
     {
       id: 'monthly',
@@ -110,66 +148,174 @@ export const LandingPage = () => {
       icon: <Calendar className="h-8 w-8" />,
       color: 'from-blue-400 to-blue-600',
       features: [
-        'All features included',
         'Complete daycare management system',
         'Child profiles and development tracking',
         'Parent communication portal',
         'Activity documentation',
-        'Advanced reporting and analytics',
         'Billing and payment processing',
-        'Priority support included',
-        'No long-term commitment'
+        'Incident reporting',
+        'Staff management',
+        'Canadian compliance ready',
+        'Bilingual support (EN/FR)',
+        'Free support included'
       ],
       highlight: false,
-      note: 'After first year free trial'
+      note: 'After first year free trial',
+      planData: {
+        id: 2,
+        name: 'Monthly Plan',
+        plan_type: 'monthly',
+        price: 250,
+        description: 'Flexible monthly subscription',
+        features: JSON.stringify([
+          'Complete daycare management system',
+          'Child profiles and development tracking',
+          'Parent communication portal',
+          'Activity documentation',
+          'Billing and payment processing',
+          'Incident reporting',
+          'Staff management',
+          'Canadian compliance ready',
+          'Bilingual support (EN/FR)',
+          'Free support included'
+        ])
+      }
     },
     {
       id: 'yearly',
       name: 'Annual Plan',
       price: '$1,500',
       period: 'per year',
-      description: 'Best value for committed users',
+      description: 'Best value for long-term use',
       icon: <Crown className="h-8 w-8" />,
       color: 'from-purple-400 to-purple-600',
       features: [
-        'All features included',
         'Complete daycare management system',
         'Child profiles and development tracking',
         'Parent communication portal',
         'Activity documentation',
-        'Advanced reporting and analytics',
         'Billing and payment processing',
-        'Priority support included',
-        'Save $1,500 per year',
-        'Annual billing discount'
+        'Incident reporting',
+        'Staff management',
+        'Canadian compliance ready',
+        'Bilingual support (EN/FR)',
+        'Free support included'
       ],
       highlight: true,
-      note: 'Most popular choice'
+      note: 'Most popular choice',
+      planData: {
+        id: 3,
+        name: 'Annual Plan',
+        plan_type: 'yearly',
+        price: 1500,
+        description: 'Best value for long-term use',
+        features: JSON.stringify([
+          'Complete daycare management system',
+          'Child profiles and development tracking',
+          'Parent communication portal',
+          'Activity documentation',
+          'Billing and payment processing',
+          'Incident reporting',
+          'Staff management',
+          'Canadian compliance ready',
+          'Bilingual support (EN/FR)',
+          'Free support included'
+        ])
+      }
     },
     {
       id: 'lifetime',
-      name: 'Lifetime Access',
+      name: 'Lifetime Plan',
       price: '$3,000',
       period: 'one-time',
       description: 'Pay once, use forever',
       icon: <Infinity className="h-8 w-8" />,
       color: 'from-amber-400 to-amber-600',
       features: [
-        'All features included forever',
         'Complete daycare management system',
         'Child profiles and development tracking',
         'Parent communication portal',
         'Activity documentation',
-        'Advanced reporting and analytics',
         'Billing and payment processing',
-        'Lifetime support included',
-        'No recurring payments',
-        'Future updates included'
+        'Incident reporting',
+        'Staff management',
+        'Canadian compliance ready',
+        'Bilingual support (EN/FR)',
+        'Free support included'
       ],
       highlight: false,
-      note: 'Best long-term value'
+      note: 'Best long-term value',
+      planData: {
+        id: 4,
+        name: 'Lifetime Plan',
+        plan_type: 'lifetime',
+        price: 3000,
+        description: 'Pay once, use forever',
+        features: JSON.stringify([
+          'Complete daycare management system',
+          'Child profiles and development tracking',
+          'Parent communication portal',
+          'Activity documentation',
+          'Billing and payment processing',
+          'Incident reporting',
+          'Staff management',
+          'Canadian compliance ready',
+          'Bilingual support (EN/FR)',
+          'Free support included'
+        ])
+      }
     }
   ];
+
+  // Convert backend plans to frontend format (if available)
+  const formatPlansForDisplay = () => {
+    if (!availablePlans || availablePlans.length === 0) {
+      return fallbackPricingPlans; // Use fallback data
+    }
+
+    const planIcons = {
+      'free': <Heart className="h-8 w-8" />,
+      'monthly': <Calendar className="h-8 w-8" />,
+      'yearly': <Crown className="h-8 w-8" />,
+      'lifetime': <Infinity className="h-8 w-8" />
+    };
+
+    const planColors = {
+      'free': 'from-green-400 to-green-600',
+      'monthly': 'from-blue-400 to-blue-600',
+      'yearly': 'from-purple-400 to-purple-600',
+      'lifetime': 'from-amber-400 to-amber-600'
+    };
+
+    const planNotes = {
+      'free': 'Free for parents forever',
+      'monthly': 'After first year free trial',
+      'yearly': 'Most popular choice',
+      'lifetime': 'Best long-term value'
+    };
+
+    return availablePlans.map(plan => {
+      const features = plan.features ? JSON.parse(plan.features) : [];
+      
+      return {
+        id: plan.plan_type,
+        name: plan.name,
+        price: plan.price === 0 ? 'Free' : `$${plan.price.toLocaleString()}`,
+        period: plan.plan_type === 'monthly' ? 'per month' : 
+                plan.plan_type === 'yearly' ? 'per year' : 
+                plan.plan_type === 'lifetime' ? 'one-time' : 'for 1 year',
+        description: plan.description,
+        icon: planIcons[plan.plan_type] || <Heart className="h-8 w-8" />,
+        color: planColors[plan.plan_type] || 'from-gray-400 to-gray-600',
+        features: features,
+        highlight: plan.plan_type === 'yearly',
+        note: planNotes[plan.plan_type] || '',
+        planData: plan // Store original plan data
+      };
+    });
+  };
+
+  const pricingPlans = formatPlansForDisplay();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
@@ -298,7 +444,7 @@ export const LandingPage = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
-              onClick={() => scrollToSection('pricing-section')}
+              onClick={handleGetStarted}
               className="gradient-bg text-white px-8 py-4 rounded-lg text-lg font-semibold hover:shadow-lg transition-all duration-300 flex items-center space-x-2"
             >
               <span>Start Your Journey</span>
@@ -450,7 +596,7 @@ export const LandingPage = () => {
                 </div>
               </div>
               <button
-                onClick={() => scrollToSection('pricing-section')}
+                onClick={handleGetStarted}
                 className="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300"
               >
                 {t('startFreeTrial')}
@@ -484,7 +630,7 @@ export const LandingPage = () => {
                 </div>
               </div>
               <button
-                onClick={handleGetStarted}
+                onClick={handleSignUp}
                 className="w-full bg-white text-gray-800 py-3 rounded-lg font-semibold border border-gray-300 hover:bg-gray-50 transition-colors"
               >
                 {t('joinAsParent')}
@@ -494,7 +640,7 @@ export const LandingPage = () => {
         </div>
       </section>
 
-      {/* NEW: Pricing Section */}
+      {/* Pricing Section */}
       <section id="pricing-section" className="py-20 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -514,11 +660,12 @@ export const LandingPage = () => {
             {pricingPlans.map((plan) => (
               <div
                 key={plan.id}
-                className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl ${
+                className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl cursor-pointer ${
                   plan.highlight 
                     ? 'border-purple-500 transform scale-105' 
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
+                onClick={() => handlePlanSelection(plan.planData)}
               >
                 {plan.highlight && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -557,14 +704,17 @@ export const LandingPage = () => {
 
                   {/* CTA Button */}
                   <button
-                    onClick={handleGetStarted}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePlanSelection(plan.planData);
+                    }}
                     className={`w-full py-3 rounded-lg font-semibold transition-all duration-300 ${
                       plan.highlight
                         ? 'bg-purple-500 text-white hover:bg-purple-600 shadow-lg'
                         : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                     }`}
                   >
-                    {plan.id === 'free' ? 'Start Free Trial' : 'Get Started'}
+                    {plan.id === 'free' ? 'Start Free Trial' : 'Choose Plan'}
                   </button>
                 </div>
               </div>
