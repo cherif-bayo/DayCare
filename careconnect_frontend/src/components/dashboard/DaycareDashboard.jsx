@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { apiCall } from '../../lib/mockApi';
 import { API_ENDPOINTS } from '../../lib/config';
 import ChildrenManagement from '../children/ChildrenManagement';
+import ManageAccount from '../account/ManageAccount';
 import { toast } from 'react-hot-toast';
 import { useDaycareStats } from '../../hooks/useDaycareStats';
 import ManageAgeGroupsForm from "../age-groups/ManageAgeGroupsForm";
@@ -1287,6 +1288,15 @@ const DaycareDashboard = () => {
        );
   }
 
+  // NEW: Manage Account screen
+  if (currentView === 'manage-account') {
+    return (
+      <ManageAccount
+        onBack={() => setCurrentView('dashboard')}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1530,6 +1540,14 @@ const DaycareDashboard = () => {
             >
               {i18n.language === 'en' ? 'FR' : 'EN'}
             </button>
+            {/* NEW: Manage Account Button */}
+            <button
+               onClick={() => setCurrentView('manage-account')}
+               className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-900"
+             >
+               <span>⚙️</span>
+               <span>Manage Account</span>
+             </button>
             <button
               onClick={logout}
               className="flex items-center space-x-1 text-sm text-gray-600 hover:text-gray-900"
